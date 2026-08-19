@@ -20,8 +20,10 @@ test("server-renders the Hatsmash scan experience", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Hatsmash — Find what your AI builder missed<\/title>/i);
-  assert.match(html, /Your site looks done/);
-  assert.match(html, /Smash test it/);
-  assert.match(html, /No signup\. Your first 3 scans each day are free\./);
+  assert.match(html, /Paste your URL/);
+  assert.match(html, /Fix what AI missed/);
+  assert.match(html, /Scan this site/);
+  assert.match(html, /Three free scans per day\./);
+  assert.doesNotMatch(html, /pricing|unlock all fix-prompts|scan history/i);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|TestPilot|site-creator/i);
 });

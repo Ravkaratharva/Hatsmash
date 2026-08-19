@@ -3,236 +3,214 @@
 import { FormEvent, useState } from "react";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
+type Severity = "critical" | "warning" | "info";
+
+type Finding = {
+  id: string;
+  category: "Accessibility" | "Performance" | "SEO" | "AI-tell" | "Security";
+  severity: Severity;
+  title: string;
+  evidence: string;
+};
+
+type ScanResponse = {
+  url: string;
+  score: number;
+  scannedAt: string;
+  findings: Finding[];
+};
 
 const scanSteps = [
-  "Loading rendered page",
-  "Checking accessibility",
-  "Reading metadata & scripts",
-  "Finding AI-build leftovers",
+  "Rendering the live page",
+  "Testing semantics and contrast",
+  "Reading network and metadata",
+  "Checking for AI-build leftovers",
 ];
 
-const tools = ["Lovable", "Cursor", "Bolt", "v0", "Replit Agent"];
-const issues = [
-  { level: "critical", category: "Accessibility", title: "Hero image has no alt text", detail: "Screen readers skip the page’s most important visual." },
-  { level: "critical", category: "Security", title: "Public API key found in client bundle", detail: "A credential is readable in a shipped JavaScript file." },
-  { level: "attention", category: "Performance", title: "Largest image ships at 2.8 MB", detail: "Your LCP is 4.1s on a mid-range mobile connection." },
-  { level: "attention", category: "SEO", title: "Every page uses the same title", detail: "Search results can’t distinguish your routes." },
-  { level: "quick", category: "AI-tell", title: "Placeholder copy survived the build", detail: "“Lorem ipsum” appears in the pricing FAQ." },
-];
-
-const promptByTool: Record<string, string> = {
-  Lovable: "Update the hero image in src/components/Hero.tsx. Add concise, descriptive alt text that explains what the image contributes to the page. If the image is purely decorative, use alt=\"\" instead. Keep the current layout and styling unchanged.",
-  Cursor: "In src/components/Hero.tsx, find the primary hero <img> or <Image> element. Add a meaningful alt attribute describing the image’s purpose in context. Use alt=\"\" only if it is decorative. Do not change the source, dimensions, layout, or styles.",
-  Bolt: "Fix the missing accessible name on the hero image. Add contextual alt text to the hero image component, preserve the existing responsive sizing, and verify the rendered image has an alt attribute in the DOM.",
-  v0: "Update the hero media component to meet WCAG image text-alternative requirements. Add descriptive alt text to the image while preserving all Tailwind classes, responsive behavior, and component props.",
-  "Replit Agent": "Locate the main hero image component and add an appropriate alt attribute. Describe the image’s function in one short sentence, or use an empty alt value if decorative. Run the existing checks after the edit and avoid unrelated changes.",
-};
+function normalizeUrl(value: string) {
+  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  const parsed = new URL(withProtocol);
+  if (!parsed.hostname.includes(".") && parsed.hostname !== "localhost") throw new Error("invalid");
+  return parsed.toString();
+}
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [state, setState] = useState<ScanState>("idle");
   const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
-  const [unlocked, setUnlocked] = useState(false);
-  const [selectedTool, setSelectedTool] = useState("Cursor");
-  const [copied, setCopied] = useState(false);
+  const [scan, setScan] = useState<ScanResponse | null>(null);
 
   async function runScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    let normalizedUrl = url.trim();
-    if (!/^https?:\/\//i.test(normalizedUrl)) normalizedUrl = `https://${normalizedUrl}`;
+    setScan(null);
+
+    if (!url.trim()) {
+      setState("error");
+      setError("Paste a website URL to start the scan.");
+      return;
+    }
+
+    let normalizedUrl: string;
+    try {
+      normalizedUrl = normalizeUrl(url.trim());
+    } catch {
+      setState("error");
+      setError("That URL doesn’t look right. Try something like https://your-site.com.");
+      return;
+    }
+
+    setUrl(normalizedUrl);
+    setState("scanning");
 
     try {
-      new URL(normalizedUrl);
-      setUrl(normalizedUrl);
-      setState("scanning");
       const response = await fetch("/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: normalizedUrl }),
       });
-      if (!response.ok) throw new Error("We couldn’t reach that page. Check the URL and try again.");
-      await response.json();
+      const payload = await response.json() as ScanResponse | { error?: string };
+      if (!response.ok) {
+        throw new Error("error" in payload && payload.error ? payload.error : "The scan failed before it could finish.");
+      }
+      setScan(payload as ScanResponse);
       setState("complete");
     } catch (scanError) {
-      setError(scanError instanceof Error ? scanError.message : "Something interrupted the scan. Try again.");
       setState("error");
+      setError(scanError instanceof Error ? scanError.message : "The scan failed before it could finish. Please try again.");
     }
   }
 
-  function unlockPrompts(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(email)) return;
-    setUnlocked(true);
-  }
-
-  async function copyPrompt() {
-    await navigator.clipboard.writeText(promptByTool[selectedTool]);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }
-
   return (
-    <main>
+    <main className="page-shell">
       <header className="site-header">
-        <a className="brand" href="#top" aria-label="Hatsmash home">
-          <span className="brand-mark" aria-hidden="true"><i /><b /></span>
-          <span>Hatsmash</span>
+        <a className="logo-link" href="#top" aria-label="Hatsmash home">
+          <img src="/hatsmash-logo.png" width="378" height="153" alt="Hatsmash" />
         </a>
-        <nav aria-label="Main navigation">
-          <a href="#how-it-works">How it works</a>
-          <a href="#pricing">Pricing</a>
-          <a className="nav-cta" href="#scan">Run a scan</a>
-        </nav>
+        <p><span aria-hidden="true" /> Free scan · no login</p>
       </header>
 
       <section className="hero" id="top">
         <div className="hero-copy">
-          <p className="eyebrow"><span /> Website QA for AI-built sites</p>
-          <h1>Your site looks done.<br /><em>Let’s test that.</em></h1>
+          <p className="eyebrow"><span aria-hidden="true">↳</span> Website QA for AI-built sites</p>
+          <h1>Paste your URL.<br /><em>Fix what AI missed.</em></h1>
           <p className="hero-intro">
-            Paste your URL. Hatsmash finds what your AI builder missed—and writes the exact prompt to fix each issue in Lovable, Cursor, Bolt, v0, or Replit.
+            Hatsmash checks the site your AI builder shipped, then turns every issue into an exact prompt for Lovable, Cursor, Bolt, v0, or Replit.
           </p>
 
-          <form className="scan-form" id="scan" onSubmit={runScan} noValidate>
-            <label htmlFor="site-url">Website URL</label>
-            <div className="input-row">
-              <span aria-hidden="true">↗</span>
+          <form className="scan-form" onSubmit={runScan} noValidate>
+            <label htmlFor="site-url">Website to inspect</label>
+            <div className={`input-row ${error ? "has-error" : ""}`}>
+              <span className="protocol" aria-hidden="true">https://</span>
               <input
                 id="site-url"
+                name="url"
                 type="text"
                 inputMode="url"
+                autoComplete="url"
                 placeholder="your-site.com"
-                value={url}
-                onChange={(event) => setUrl(event.target.value)}
-                required
+                value={url.replace(/^https?:\/\//, "")}
+                onChange={(event) => {
+                  setUrl(event.target.value);
+                  if (error) {
+                    setError("");
+                    setState("idle");
+                  }
+                }}
+                aria-invalid={Boolean(error)}
                 aria-describedby={error ? "scan-error" : "scan-note"}
               />
-              <button type="submit" disabled={state === "scanning" || !url.trim()}>
-                {state === "scanning" ? "Scanning…" : state === "complete" ? "Scan again" : "Smash test it"}
+              <button type="submit" disabled={state === "scanning"}>
+                {state === "scanning" ? "Inspecting…" : state === "complete" ? "Scan again" : "Scan this site"}
                 <span aria-hidden="true">→</span>
               </button>
             </div>
-            {error ? <p className="form-error" id="scan-error" role="alert">{error}</p> : <p className="form-note" id="scan-note">No signup. Your first 3 scans each day are free.</p>}
+            {error ? (
+              <p className="form-message error-message" id="scan-error" role="alert"><b>Scan stopped.</b> {error}</p>
+            ) : (
+              <p className="form-message" id="scan-note">No repo access. No account. Three free scans per day.</p>
+            )}
           </form>
+
+          <div className="builder-line" aria-label="Supported AI website builders">
+            <span>Fix prompts for</span>
+            <b>Lovable</b><b>Cursor</b><b>Bolt</b><b>v0</b><b>Replit</b>
+          </div>
         </div>
 
-        <div className={`audit-window ${state}`} aria-live="polite">
+        <div className={`inspection-window ${state}`} aria-live="polite" aria-label="Website inspection preview">
           <div className="browser-bar">
-            <div className="browser-dots" aria-hidden="true"><span /><span /><span /></div>
-            <div className="address-bar">{url || "your-site.com"}</div>
-            <div className="status-pill"><i /> {state === "scanning" ? "SCANNING" : state === "complete" ? "AUDIT READY" : "LIVE AUDIT"}</div>
+            <div className="browser-dots" aria-hidden="true"><i /><i /><i /></div>
+            <div className="address-bar"><span aria-hidden="true">⌁</span>{url || "your-site.com"}</div>
+            <div className="scan-status"><i />{state === "scanning" ? "SCANNING" : state === "complete" ? "SCAN COMPLETE" : state === "error" ? "SCAN STOPPED" : "READY"}</div>
           </div>
-          <div className="audit-body">
-            <div className="preview-pane" aria-hidden="true">
-              <div className="mock-nav"><span /><span /><span /></div>
-              <div className="mock-title" />
-              <div className="mock-copy" />
-              <div className="mock-copy short" />
-              <div className="mock-button" />
-              <div className="redline redline-one">01 <span>Missing alt text</span></div>
-              <div className="redline redline-two">02 <span>Contrast 2.8:1</span></div>
-              <div className="scan-line" />
+
+          <div className="inspection-body">
+            <div className="site-preview" aria-hidden="true">
+              <div className="preview-nav"><i /><span /><span /><span /></div>
+              <div className="preview-hero-line wide" />
+              <div className="preview-hero-line" />
+              <div className="preview-copy" />
+              <div className="preview-copy short" />
+              <div className="preview-action" />
+              <div className="preview-cards"><i /><i /><i /></div>
+              <div className="annotation annotation-alt"><b>A11Y</b><span>Image has no alt text</span></div>
+              <div className="annotation annotation-title"><b>SEO</b><span>Title is 74 characters</span></div>
+              <div className="annotation annotation-copy"><b>AI</b><span>Placeholder copy found</span></div>
+              <div className="scan-beam"><span>INSPECTING DOM</span></div>
             </div>
 
-            <aside className="findings-pane">
-              <div className="score-row">
-                <div><small>Site health</small><strong>{state === "complete" ? "72" : "—"}<sup>/100</sup></strong></div>
-                <span className="grade">{state === "complete" ? "C" : "?"}</span>
+            <aside className="findings-rail">
+              <div className="rail-heading">
+                <span>LIVE FINDINGS</span>
+                <b>{scan ? scan.findings.length : "—"}</b>
               </div>
-              <div className="finding-summary">
-                <p><span className="severity high" /> Critical <b>{state === "complete" ? "2" : "—"}</b></p>
-                <p><span className="severity medium" /> Needs attention <b>{state === "complete" ? "7" : "—"}</b></p>
-                <p><span className="severity low" /> Quick wins <b>{state === "complete" ? "11" : "—"}</b></p>
-              </div>
-              {state === "scanning" ? (
+
+              {state === "scanning" && (
                 <div className="scan-progress">
-                  {scanSteps.map((step, index) => <p key={step} style={{ "--delay": `${index * 0.35}s` } as React.CSSProperties}><i /> {step}</p>)}
-                </div>
-              ) : (
-                <div className={`locked-prompt ${unlocked ? "is-unlocked" : ""}`}>
-                  <span>{selectedTool.toUpperCase()} FIX-PROMPT</span>
-                  <p>{promptByTool[selectedTool]}</p>
-                  <div>{unlocked ? "✓ Prompts unlocked" : "⌁ Unlock exact fix"}</div>
+                  {scanSteps.map((step, index) => (
+                    <p key={step} style={{ "--step-delay": `${index * 0.32}s` } as React.CSSProperties}><i />{step}</p>
+                  ))}
                 </div>
               )}
-            </aside>
-          </div>
-          <div className="window-footer"><span>ACCESSIBILITY</span><span>PERFORMANCE</span><span>SEO</span><span>AI-TELLS</span><span>SECURITY</span></div>
-        </div>
-      </section>
 
-      {state === "complete" && (
-        <section className="results" id="results">
-          <div className="section-kicker">Scan complete · {url.replace(/^https?:\/\//, "")}</div>
-          <div className="results-heading">
-            <div><h2>20 things worth fixing.</h2><p>Here’s the evidence. The exact repair prompts are ready when you are.</p></div>
-            <div className="result-score"><strong>72</strong><span>Site health<br />Needs attention</span></div>
-          </div>
+              {state === "error" && (
+                <div className="rail-error">
+                  <span>×</span>
+                  <strong>Couldn’t finish this scan</strong>
+                  <p>Check that the site is public and try again.</p>
+                </div>
+              )}
 
-          <div className="results-layout">
-            <div className="issue-list">
-              {issues.map((issue, index) => (
-                <article className="issue" key={issue.title}>
-                  <span className={`issue-number ${issue.level}`}>{String(index + 1).padStart(2, "0")}</span>
-                  <div><small>{issue.category} · {issue.level === "quick" ? "Quick win" : issue.level}</small><h3>{issue.title}</h3><p>{issue.detail}</p></div>
-                  <button type="button" aria-label={`View fix for ${issue.title}`}>→</button>
-                </article>
-              ))}
-              <p className="more-issues">+ 15 more issues across accessibility, performance, SEO, AI-tells, and security</p>
-            </div>
-
-            <aside className="prompt-card">
-              {!unlocked ? (
+              {state === "complete" && scan && (
                 <>
-                  <div className="prompt-lock">⌁</div>
-                  <p className="section-kicker">Your fix-prompts are ready</p>
-                  <h3>Don’t just find the issue.<br />Paste the fix.</h3>
-                  <div className="blurred-code"><span>// Cursor</span><p>{promptByTool.Cursor}</p></div>
-                  <form onSubmit={unlockPrompts} className="email-form">
-                    <label htmlFor="unlock-email">Email address</label>
-                    <input id="unlock-email" type="email" required placeholder="you@company.com" value={email} onChange={(event) => setEmail(event.target.value)} />
-                    <button type="submit">Unlock all fix-prompts <span>→</span></button>
-                  </form>
-                  <small className="privacy-note">One useful email when your report is ready. Unsubscribe anytime.</small>
-                </>
-              ) : (
-                <>
-                  <div className="unlocked-badge">✓ FIX-PROMPTS UNLOCKED</div>
-                  <h3>Paste this into {selectedTool}.</h3>
-                  <div className="tool-tabs" role="tablist" aria-label="Target AI builder">
-                    {tools.map((tool) => <button key={tool} type="button" role="tab" aria-selected={selectedTool === tool} onClick={() => setSelectedTool(tool)}>{tool}</button>)}
+                  <div className="score-block"><strong>{scan.score}</strong><span>/100<br />SITE HEALTH</span></div>
+                  <div className="finding-list">
+                    {scan.findings.slice(0, 3).map((finding) => (
+                      <div className="finding" key={finding.id}>
+                        <i className={finding.severity} />
+                        <div><span>{finding.category}</span><strong>{finding.title}</strong></div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="prompt-code"><span>// Fix 01 · Missing alt text</span><p>{promptByTool[selectedTool]}</p></div>
-                  <button className="copy-button" type="button" onClick={copyPrompt}>{copied ? "Copied to clipboard ✓" : "Copy prompt"}</button>
-                  <p className="unlock-confirmation">Prompts unlocked for this report. No redirect, no inbox detour.</p>
                 </>
+              )}
+
+              {state === "idle" && (
+                <div className="rail-idle">
+                  <div className="reticle" aria-hidden="true"><i /></div>
+                  <strong>Waiting for a URL</strong>
+                  <p>The live audit will appear here.</p>
+                </div>
               )}
             </aside>
           </div>
-        </section>
-      )}
 
-      <section className="how" id="how-it-works">
-        <div className="how-copy">
-          <p className="section-kicker">How Hatsmash works</p>
-          <h2>A code review for the site your AI just shipped.</h2>
+          <div className="category-strip" aria-hidden="true">
+            <span>ACCESSIBILITY</span><span>PERFORMANCE</span><span>SEO</span><span>AI-TELLS</span><span>SECURITY</span>
+          </div>
         </div>
-        <ol className="process-list">
-          <li><span>Paste</span><strong>Give us the live URL</strong><p>No repo access or setup. We inspect what your visitors actually receive.</p></li>
-          <li><span>Inspect</span><strong>We test the rendered site</strong><p>Accessibility, speed, responsive behavior, SEO, security basics, and obvious AI leftovers.</p></li>
-          <li><span>Repair</span><strong>Copy the fix into your builder</strong><p>Every issue comes with a prompt written for the tool you already use.</p></li>
-        </ol>
       </section>
-
-      <section className="pricing" id="pricing">
-        <div className="pricing-intro"><p className="section-kicker">Simple pricing</p><h2>Free is useful.<br />Pro saves the history.</h2><p>We don’t hide whether your site works. Pay when you need volume, monitoring, and reports.</p></div>
-        <div className="price-card free"><span>FREE</span><strong>$0</strong><p>For checking what you just shipped.</p><ul><li>3 scans per day</li><li>Full issue summary</li><li>Fix-prompts for one AI tool</li><li>No login required</li></ul><a href="#scan">Run a free scan →</a></div>
-        <div className="price-card pro"><span>PRO · MONTHLY</span><strong>$19<small>/mo</small></strong><p>For sites you keep improving.</p><ul><li>Unlimited scans</li><li>All tool prompts side by side</li><li>Saved sites and scan history</li><li>PDF exports and weekly monitoring</li></ul><button type="button">Join the early-access list →</button></div>
-      </section>
-
-      <footer><a className="brand" href="#top"><span className="brand-mark" aria-hidden="true"><i /><b /></span><span>Hatsmash</span></a><p>Find what your AI builder missed.</p><small>© 2026 Hatsmash</small></footer>
     </main>
   );
 }
