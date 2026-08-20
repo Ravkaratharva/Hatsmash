@@ -3,11 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const secondaryNav = [
-  { href: "/pricing", label: "Pricing" },
-  { href: "/community", label: "Community" },
-];
-
 export function SiteNav({ current = "" }: { current?: string }) {
   const [open, setOpen] = useState(false);
 
@@ -36,15 +31,15 @@ export function SiteNav({ current = "" }: { current?: string }) {
 
       <nav className={open ? "nav-links is-open" : "nav-links"} id="primary-navigation" aria-label="Primary navigation">
         <Link className={current === "home" ? "active" : ""} href="/">Home</Link>
-        {secondaryNav.map((item) => (
-          <Link
-            className={current === item.label.toLowerCase() ? "active" : ""}
-            href={item.href}
-            key={item.href}
-          >
-            {item.label}
-          </Link>
-        ))}
+        <Link
+          className={current === "pricing" ? "active" : ""}
+          href="/pricing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Pricing
+        </Link>
+        <Link className={current === "community" ? "active" : ""} href="/community">Community</Link>
         <span className="nav-divider" aria-hidden="true" />
         <Link href="/login">Log In</Link>
         <Link className="signup-link" href="/signup">Sign Up</Link>

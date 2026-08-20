@@ -20,16 +20,17 @@ async function htmlFor(path) {
   return response.text();
 }
 
-test("landing page leads into the product with same-tab navigation", async () => {
+test("landing navigation only opens pricing in a new tab", async () => {
   const html = await htmlFor("/");
   assert.match(html, /<title>Hatsmash — Find what your AI builder missed<\/title>/i);
   assert.match(html, /Your site looks done/);
   assert.match(html, /href="\/app"[^>]*>Smash It/i);
-  for (const route of ["pricing", "community", "login", "signup"]) {
-    assert.match(html, new RegExp(`href="/${route}"`, "i"));
+  assert.match(html, /href="\/pricing"(?=[^>]*target="_blank")/i);
+  for (const route of ["community", "login", "signup", "app"]) {
+    const link = html.match(new RegExp(`<a[^>]*href="/${route}"[^>]*>`, "i"));
+    assert.ok(link, `/${route} link should exist`);
+    assert.doesNotMatch(link[0], /target="_blank"/i);
   }
-
-  assert.doesNotMatch(html, /target="_blank"/i);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|TestPilot|site-creator/i);
 });
 
