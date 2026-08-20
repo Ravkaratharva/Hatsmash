@@ -529,7 +529,7 @@ h1 em { color: var(--finding-red); font-style: normal; }
 
 .inner-page { padding-bottom: 100px; }
 .inner-hero { width: min(1100px, calc(100% - 56px)); margin: 0 auto; padding: 95px 0 70px; text-align: center; }
-.inner-hero h1 { font-size: clamp(4.4rem, 7.5vw, 8rem); }
+.inner-hero h1 { margin-left: auto; margin-right: auto; font-size: clamp(4.4rem, 7.5vw, 8rem); }
 .inner-hero > p:not(.marketing-eyebrow) { margin-left: auto; margin-right: auto; }
 .pricing-grid { width: min(1240px, calc(100% - 56px)); margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
 .plan-card { position: relative; min-height: 540px; padding: 31px; display: flex; flex-direction: column; color: var(--audit-ink); background: white; border: 1px solid #b9c4c9; border-radius: 7px; }
