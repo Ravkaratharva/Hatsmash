@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export function SiteNav({ current = "" }: { current?: string }) {
@@ -14,9 +13,9 @@ export function SiteNav({ current = "" }: { current?: string }) {
 
   return (
     <header className="marketing-nav">
-      <Link className="marketing-logo" href="/" aria-label="Hatsmash home">
+      <a className="marketing-logo" href="/" aria-label="Hatsmash home">
         <img src="/hatsmash-logo.png" width="378" height="153" alt="Hatsmash" />
-      </Link>
+      </a>
 
       <button
         className="menu-toggle"
@@ -30,18 +29,18 @@ export function SiteNav({ current = "" }: { current?: string }) {
       </button>
 
       <nav className={open ? "nav-links is-open" : "nav-links"} id="primary-navigation" aria-label="Primary navigation">
-        <Link className={current === "home" ? "active" : ""} href="/">Home</Link>
-        <Link
+        <a className={current === "home" ? "active" : ""} href="/">Home</a>
+        <a
           className={current === "pricing" ? "active" : ""}
           href="/pricing"
         >
           Pricing
-        </Link>
-        <Link className={current === "community" ? "active" : ""} href="/community">Community</Link>
+        </a>
+        <a className={current === "community" ? "active" : ""} href="/community">Community</a>
         <span className="nav-divider" aria-hidden="true" />
-        <Link href="/login">Log In</Link>
-        <Link className="signup-link" href="/signup">Sign Up</Link>
-        <Link className="smash-nav-cta" href="/app">Smash It <span aria-hidden="true">→</span></Link>
+        <a href="/login">Log In</a>
+        <a className="signup-link" href="/signup">Sign Up</a>
+        <a className="smash-nav-cta" href="/app">Smash It <span aria-hidden="true">→</span></a>
       </nav>
     </header>
   );

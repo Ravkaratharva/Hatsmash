@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 async function render(path = "/") {
@@ -32,6 +33,21 @@ test("all internal landing navigation stays in the current tab", async () => {
   }
   assert.doesNotMatch(html, /target="_blank"/i);
   assert.doesNotMatch(html, /codex-preview|SkeletonPreview|TestPilot|site-creator/i);
+});
+
+test("internal navigation uses native links so deployed clicks cannot be intercepted", async () => {
+  const files = [
+    "app/_components/SiteNav.tsx",
+    "app/_components/AuthPanel.tsx",
+    "app/page.tsx",
+    "app/community/page.tsx",
+    "app/pricing/page.tsx",
+  ];
+
+  for (const file of files) {
+    const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /from ["']next\/link["']/);
+  }
 });
 
 test("scan experience remains available at /app", async () => {

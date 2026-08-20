@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { SiteNav } from "./_components/SiteNav";
 
 export default function LandingPage() {
@@ -14,7 +13,7 @@ export default function LandingPage() {
             Hatsmash catches the accessibility misses, slow pages, broken metadata, exposed keys, and suspicious AI leftovers—then writes the prompt that fixes each one.
           </p>
           <div className="landing-actions">
-            <Link className="primary-smash" href="/app">Smash It <span aria-hidden="true">→</span></Link>
+            <a className="primary-smash" href="/app">Smash It <span aria-hidden="true">→</span></a>
             <a className="secondary-action" href="/community">Explore Community <span aria-hidden="true">→</span></a>
           </div>
           <div className="landing-trust">
@@ -73,7 +72,7 @@ export default function LandingPage() {
       <section className="landing-final-cta">
         <p>YOUR AI BUILDER SAID “DONE.”</p>
         <h2>Hatsmash gets the last word.</h2>
-        <Link className="primary-smash" href="/app">Smash It <span aria-hidden="true">→</span></Link>
+        <a className="primary-smash" href="/app">Smash It <span aria-hidden="true">→</span></a>
       </section>
     </main>
   );

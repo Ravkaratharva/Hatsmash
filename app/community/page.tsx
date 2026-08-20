@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { SiteNav } from "../_components/SiteNav";
 
 const title = "Community — Hatsmash";
@@ -32,7 +31,7 @@ export default function CommunityPage() {
         <h1>We found what the prompt <em>forgot.</em></h1>
         <p>Share spectacular misses, celebrate clean fixes, and see what other AI-built sites are getting wrong this week.</p>
         <div className="landing-actions">
-          <Link className="primary-smash" href="/app">Smash your site <span>→</span></Link>
+          <a className="primary-smash" href="/app">Smash your site <span>→</span></a>
           <button className="secondary-action community-placeholder" type="button" title="Community posting is not connected yet">Share a result <span>↗</span></button>
         </div>
       </section>
@@ -56,7 +55,7 @@ export default function CommunityPage() {
           <span>WEEKLY CHALLENGE · 04 DAYS LEFT</span>
           <h2>Kill the placeholder.</h2>
           <p>Find and fix the most embarrassing placeholder copy that survived an AI build. Best repair prompt wins the “Lorem Slayer” badge.</p>
-          <Link href="/app">Enter with a scan →</Link>
+          <a href="/app">Enter with a scan →</a>
         </div>
         <div className="leaderboard">
           <p className="marketing-eyebrow"><span>LEADERBOARD</span> Fixes shipped this week</p>

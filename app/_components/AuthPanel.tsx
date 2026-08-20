@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 export function AuthPanel({ mode }: { mode: "login" | "signup" }) {
@@ -50,7 +49,7 @@ export function AuthPanel({ mode }: { mode: "login" | "signup" }) {
       {notice && <p className="auth-notice" role="status">{notice}</p>}
       <p className="auth-switch">
         {isLogin ? "New to Hatsmash?" : "Already have an account?"}{" "}
-        <Link href={isLogin ? "/signup" : "/login"}>{isLogin ? "Sign up" : "Log in"}</Link>
+        <a href={isLogin ? "/signup" : "/login"}>{isLogin ? "Sign up" : "Log in"}</a>
       </p>
     </div>
   );

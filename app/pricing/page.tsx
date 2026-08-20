@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { SiteNav } from "../_components/SiteNav";
 
 const title = "Pricing — Hatsmash";
@@ -58,7 +57,7 @@ export default function PricingPage() {
             <p>{plan.note}</p>
             <ul>{plan.features.map((feature) => <li key={feature}><span>✓</span>{feature}</li>)}</ul>
             {plan.name === "Free" ? (
-              <Link href="/app">{plan.cta} <span>→</span></Link>
+              <a href="/app">{plan.cta} <span>→</span></a>
             ) : (
               <button type="button" title="Payments are not connected yet">{plan.cta} <span>→</span></button>
             )}
