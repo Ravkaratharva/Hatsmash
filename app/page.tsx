@@ -15,7 +15,7 @@ export default function LandingPage() {
           </p>
           <div className="landing-actions">
             <Link className="primary-smash" href="/app">Smash It <span aria-hidden="true">→</span></Link>
-            <a className="secondary-action" href="/community" target="_blank" rel="noopener noreferrer">Explore Community <span aria-hidden="true">↗</span></a>
+            <a className="secondary-action" href="/community">Explore Community <span aria-hidden="true">→</span></a>
           </div>
           <div className="landing-trust">
             <span><i /> No login to scan</span>
