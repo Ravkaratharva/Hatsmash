@@ -34,8 +34,6 @@ export function SiteNav({ current = "" }: { current?: string }) {
         <Link
           className={current === "pricing" ? "active" : ""}
           href="/pricing"
-          target="_blank"
-          rel="noopener noreferrer"
         >
           Pricing
         </Link>
