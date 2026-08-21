@@ -17,6 +17,7 @@ import { runSecurityChecks } from "./security-scan.js";
 export type ScanProgress = {
   stage: Exclude<ScanStage, "done" | "failed">;
   statusText: string;
+  liveFindings?: ScanIssueBase[];
 };
 
 type ProgressReporter = (progress: ScanProgress) => Promise<void> | void;
@@ -38,6 +39,16 @@ export async function runScanPipeline(inputUrl: string, reportProgress: Progress
     const aiTellIssues = runAiTellHeuristics(rendered);
     const securityIssues = runSecurityChecks(rendered);
     const unfilteredAxeIssues = await runAxeScan(rendered.page, new Set());
+    const preliminaryIssues = dedupeIssues([
+      ...unfilteredAxeIssues,
+      ...aiTellIssues,
+      ...securityIssues,
+    ]);
+    await reportProgress({
+      stage: "scanning",
+      statusText: `Found ${preliminaryIssues.length} issues so far; checking performance…`,
+      liveFindings: preliminaryIssues,
+    });
 
     // Keep memory below small-host limits by closing Playwright before Lighthouse starts its own Chrome process.
     rendered.screenshot = Buffer.alloc(0);
@@ -55,7 +66,11 @@ export async function runScanPipeline(inputUrl: string, reportProgress: Progress
       ...securityIssues,
     ]);
 
-    await reportProgress({ stage: "generating-fixes", statusText: "Generating tool-specific fix prompts…" });
+    await reportProgress({
+      stage: "generating-fixes",
+      statusText: `Found ${baseIssues.length} issues; generating fix prompts…`,
+      liveFindings: baseIssues,
+    });
     const findings = baseIssues.map((issue) => ({
       ...issue,
       fixPrompts: targetTools.map((tool) => ({ tool, prompt: generateFixPrompts(issue, tool) })),

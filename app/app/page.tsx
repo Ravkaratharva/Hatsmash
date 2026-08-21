@@ -1,7 +1,15 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import type { ScanJobAccepted, ScanJobStatus, ScanResult, ScanStage } from "@/lib/scan-schema";
+import { FormEvent, useEffect, useState } from "react";
+import {
+  issueCategories,
+  type IssueCategory,
+  type ScanIssueBase,
+  type ScanJobAccepted,
+  type ScanJobStatus,
+  type ScanResult,
+  type ScanStage,
+} from "@/lib/scan-schema";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
 
@@ -13,6 +21,97 @@ const scanSteps: Array<{ stage: Exclude<ScanStage, "done" | "failed">; label: st
 ];
 
 const stageOrder = scanSteps.map((step) => step.stage);
+
+const categoryLabels: Record<IssueCategory, { badge: string; tab: string }> = {
+  Accessibility: { badge: "A11Y", tab: "Accessibility" },
+  Performance: { badge: "PERF", tab: "Performance" },
+  SEO: { badge: "SEO", tab: "SEO" },
+  "AI-tell": { badge: "AI", tab: "AI-Tells" },
+  Security: { badge: "SEC", tab: "Security" },
+};
+
+const demoFindings: ScanIssueBase[] = [
+  {
+    id: "demo-title-length",
+    category: "SEO",
+    severity: "warning",
+    message: "Page title is 74 characters",
+    location: "document head · <title>",
+    fixDescription: "Shorten the page title to a focused 50–60 characters.",
+    ruleId: "document-title-length",
+    evidence: "The current title is 74 characters long.",
+  },
+  {
+    id: "demo-alt-text",
+    category: "Accessibility",
+    severity: "critical",
+    message: "Hero image has no alt text",
+    location: "hero · img:nth-of-type(1)",
+    fixDescription: "Add concise alternative text that describes the hero image.",
+    ruleId: "image-alt",
+    evidence: "The image has no alt attribute.",
+  },
+  {
+    id: "demo-placeholder-copy",
+    category: "AI-tell",
+    severity: "warning",
+    message: "Placeholder copy is still visible",
+    location: "feature grid · card 2",
+    fixDescription: "Replace generic placeholder text with specific product copy.",
+    ruleId: "placeholder-copy",
+    evidence: "The card includes the phrase ‘Lorem ipsum’.",
+  },
+  {
+    id: "demo-csp",
+    category: "Security",
+    severity: "warning",
+    message: "Content Security Policy is missing",
+    location: "response headers",
+    fixDescription: "Add a restrictive Content-Security-Policy response header.",
+    ruleId: "content-security-policy",
+    evidence: "No Content-Security-Policy header was returned.",
+  },
+  {
+    id: "demo-render-blocking",
+    category: "Performance",
+    severity: "critical",
+    message: "Render-blocking script delays first paint",
+    location: "document head · app.bundle.js",
+    fixDescription: "Defer the script or load it after critical page content.",
+    ruleId: "render-blocking-resources",
+    evidence: "app.bundle.js blocks the initial render for 820 ms.",
+  },
+  {
+    id: "demo-contrast",
+    category: "Accessibility",
+    severity: "info",
+    message: "CTA label has low color contrast",
+    location: "hero · primary button",
+    fixDescription: "Increase the contrast between the CTA label and its background.",
+    ruleId: "color-contrast",
+    evidence: "Contrast ratio is 3.1:1; expected at least 4.5:1.",
+  },
+  {
+    id: "demo-frame-options",
+    category: "Security",
+    severity: "info",
+    message: "Clickjacking protection is not set",
+    location: "response headers",
+    fixDescription: "Set frame-ancestors or X-Frame-Options for this page.",
+    ruleId: "frame-options",
+    evidence: "Neither frame-ancestors nor X-Frame-Options was returned.",
+  },
+  {
+    id: "demo-hero-image-size",
+    category: "Performance",
+    severity: "warning",
+    message: "Hero image is 1.8 MB larger than needed",
+    location: "hero · cover.webp",
+    fixDescription: "Resize and recompress the hero image for its rendered dimensions.",
+    ruleId: "uses-optimized-images",
+    evidence: "The 2400 px image renders at 960 px wide.",
+  },
+];
 
 function errorMessage(payload: unknown, fallback: string) {
   if (!payload || typeof payload !== "object" || !("error" in payload)) return fallback;
@@ -40,11 +139,59 @@ export default function Home() {
   const [statusText, setStatusText] = useState("Waiting for an available scanner…");
   const [error, setError] = useState("");
   const [scan, setScan] = useState<ScanResult | null>(null);
+  const [liveFindings, setLiveFindings] = useState<ScanIssueBase[]>([]);
+  const [demoVisibleCount, setDemoVisibleCount] = useState(3);
+  const [activeCategory, setActiveCategory] = useState<IssueCategory | null>(null);
+
+  useEffect(() => {
+    if (state !== "idle") return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const resetTimer = window.setTimeout(() => {
+      setDemoVisibleCount(reducedMotion ? demoFindings.length : 3);
+    }, 0);
+    if (reducedMotion) {
+      return () => window.clearTimeout(resetTimer);
+    }
+
+    const interval = window.setInterval(() => {
+      setDemoVisibleCount((current) => current >= demoFindings.length ? 3 : current + 1);
+    }, 1_350);
+
+    return () => {
+      window.clearTimeout(resetTimer);
+      window.clearInterval(interval);
+    };
+  }, [state]);
+
+  const sourceFindings: ScanIssueBase[] = state === "idle"
+    ? demoFindings.slice(0, demoVisibleCount)
+    : state === "complete"
+      ? scan?.findings ?? []
+      : state === "scanning"
+        ? liveFindings
+        : [];
+  const filteredFindings = activeCategory
+    ? sourceFindings.filter((finding) => finding.category === activeCategory)
+    : sourceFindings;
+  const hiddenFindingCount = Math.max(0, filteredFindings.length - 6);
+  const visibleFindings = filteredFindings.slice(-6);
+  const severityCounts = {
+    critical: filteredFindings.filter((finding) => finding.severity === "critical").length,
+    warning: filteredFindings.filter((finding) => finding.severity === "warning").length,
+    info: filteredFindings.filter((finding) => finding.severity === "info").length,
+  };
+  const categoryCounts = Object.fromEntries(issueCategories.map((category) => [
+    category,
+    sourceFindings.filter((finding) => finding.category === category).length,
+  ])) as Record<IssueCategory, number>;
 
   async function runScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setScan(null);
+    setLiveFindings([]);
+    setActiveCategory(null);
 
     if (!url.trim()) {
       setState("error");
@@ -91,9 +238,11 @@ export default function Home() {
         if (current.stage === "done") {
           setStatusText(current.statusText);
           setScan(current.result);
+          setLiveFindings(current.result.findings);
           setState("complete");
           return;
         }
+        if (current.liveFindings) setLiveFindings(current.liveFindings);
         setStage(current.stage);
         setStatusText(current.statusText);
       }
@@ -165,8 +314,8 @@ export default function Home() {
         <div className={`inspection-window ${state}`} aria-live="polite" aria-label="Website inspection preview">
           <div className="browser-bar">
             <div className="browser-dots" aria-hidden="true"><i /><i /><i /></div>
-            <div className="address-bar"><span aria-hidden="true">⌁</span>{url || "your-site.com"}</div>
-            <div className="scan-status"><i />{state === "scanning" ? "SCANNING" : state === "complete" ? "SCAN COMPLETE" : state === "error" ? "SCAN STOPPED" : "READY"}</div>
+            <div className="address-bar"><span aria-hidden="true">⌁</span>{url || "hatsmash-demo.site"}</div>
+            <div className="scan-status"><i />{state === "scanning" ? "LIVE SCAN" : state === "complete" ? "SCAN COMPLETE" : state === "error" ? "SCAN STOPPED" : "DEMO SCAN"}</div>
           </div>
 
           <div className="inspection-body">
@@ -178,19 +327,28 @@ export default function Home() {
               <div className="preview-copy short" />
               <div className="preview-action" />
               <div className="preview-cards"><i /><i /><i /></div>
-              <div className="annotation annotation-alt"><b>A11Y</b><span>Image has no alt text</span></div>
-              <div className="annotation annotation-title"><b>SEO</b><span>Title is 74 characters</span></div>
-              <div className="annotation annotation-copy"><b>AI</b><span>Placeholder copy found</span></div>
+              {visibleFindings.map((finding, index) => (
+                <div className={`annotation annotation-slot-${index} ${finding.severity}`} key={finding.id}>
+                  <b>{categoryLabels[finding.category].badge}</b><span>{finding.message}</span>
+                </div>
+              ))}
               <div className="scan-beam"><span>INSPECTING DOM</span></div>
             </div>
 
             <aside className="findings-rail">
               <div className="rail-heading">
-                <span>LIVE FINDINGS</span>
-                <b>{scan ? scan.findings.length : "—"}</b>
+                <div className="rail-title">
+                  <span>{state === "idle" ? "DEMO FINDINGS" : "LIVE FINDINGS"}</span>
+                  <b>{filteredFindings.length}<small>{filteredFindings.length === 1 ? " issue" : " issues"}</small></b>
+                </div>
+                <div className="severity-counts" aria-label="Finding severity counts">
+                  <span className="critical"><i />{severityCounts.critical}<small>critical</small></span>
+                  <span className="warning"><i />{severityCounts.warning}<small>warning</small></span>
+                  <span className="info"><i />{severityCounts.info}<small>info</small></span>
+                </div>
               </div>
 
-              {state === "scanning" && (
+              {state === "scanning" && liveFindings.length === 0 && (
                 <div className="scan-progress">
                   {scanSteps.map((stepItem, index) => (
                     <p
@@ -202,6 +360,10 @@ export default function Home() {
                 </div>
               )}
 
+              {state === "scanning" && liveFindings.length > 0 && (
+                <div className="scan-progress-line"><i />{statusText}</div>
+              )}
+
               {state === "error" && (
                 <div className="rail-error">
                   <span>×</span>
@@ -210,32 +372,37 @@ export default function Home() {
                 </div>
               )}
 
-              {state === "complete" && scan && (
-                <>
-                  <div className="score-block"><strong>{scan.score}</strong><span>/100<br />SITE HEALTH</span></div>
-                  <div className="finding-list">
-                    {scan.findings.slice(0, 3).map((finding) => (
-                      <div className="finding" key={finding.id}>
-                        <i className={finding.severity} />
-                        <div><span>{finding.category}</span><strong>{finding.message}</strong></div>
+              {state !== "error" && visibleFindings.length > 0 && (
+                <div className="finding-list">
+                  {hiddenFindingCount > 0 && <p className="more-findings">+{hiddenFindingCount} earlier {hiddenFindingCount === 1 ? "issue" : "issues"}</p>}
+                  {visibleFindings.map((finding) => (
+                    <div className="finding" key={finding.id}>
+                      <div className="finding-meta">
+                        <b className={`finding-category ${finding.severity}`}>{categoryLabels[finding.category].badge}</b>
+                        <span className={`severity-label ${finding.severity}`}><i />{finding.severity}</span>
                       </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {state === "idle" && (
-                <div className="rail-idle">
-                  <div className="reticle" aria-hidden="true"><i /></div>
-                  <strong>Waiting for a URL</strong>
-                  <p>The live audit will appear here.</p>
+                      <strong>{finding.message}</strong>
+                      {finding.location && <small>{finding.location}</small>}
+                    </div>
+                  ))}
                 </div>
               )}
             </aside>
           </div>
 
-          <div className="category-strip" aria-hidden="true">
-            <span>ACCESSIBILITY</span><span>PERFORMANCE</span><span>SEO</span><span>AI-TELLS</span><span>SECURITY</span>
+          <div className="category-strip" aria-label="Filter findings by category">
+            {issueCategories.map((category) => (
+              <button
+                type="button"
+                className={activeCategory === category ? "is-active" : ""}
+                aria-pressed={activeCategory === category}
+                aria-label={`${categoryLabels[category].tab}: ${categoryCounts[category]} findings`}
+                key={category}
+                onClick={() => setActiveCategory((current) => current === category ? null : category)}
+              >
+                <span>{categoryLabels[category].tab}</span><b>{categoryCounts[category]}</b>
+              </button>
+            ))}
           </div>
         </div>
       </section>

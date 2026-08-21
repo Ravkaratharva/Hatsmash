@@ -56,18 +56,30 @@ test("scan experience remains available at /app", async () => {
   assert.match(html, /Paste your URL/);
   assert.match(html, /Scan this site/);
   assert.match(html, /Three free scans per day\./);
+  assert.match(html, /DEMO FINDINGS/);
+  assert.match(html, /Page title is 74 characters/);
+  assert.match(html, /Hero image has no alt text/);
+  assert.match(html, /Placeholder copy is still visible/);
+  assert.doesNotMatch(html, /Waiting for a URL/);
   assert.doesNotMatch(html, /og\.png/i);
 });
 
-test("scan submit flow uses queued status polling instead of mock findings", async () => {
+test("demo findings stop at submission and the live scan streams real findings", async () => {
   const pageSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
   const routeSource = await readFile(new URL("../app/api/scan/route.ts", import.meta.url), "utf8");
   const schemaSource = await readFile(new URL("../lib/scan-schema.ts", import.meta.url), "utf8");
+  const pipelineSource = await readFile(new URL("../services/scanner/pipeline.ts", import.meta.url), "utf8");
   assert.match(pageSource, /api\/scan-status/);
   assert.match(pageSource, /Generating tool-specific fix prompts/);
+  assert.match(pageSource, /state === "idle"[\s\S]*demoFindings\.slice/);
+  assert.match(pageSource, /current\.liveFindings/);
+  assert.match(pageSource, /aria-label="Filter findings by category"/);
   assert.doesNotMatch(routeSource, /MOCK_FINDINGS|setTimeout\(resolve/);
   assert.match(schemaSource, /scanIssueSchema/);
+  assert.match(schemaSource, /liveFindings: z\.array\(scanIssueBaseSchema\)\.optional/);
   assert.match(schemaSource, /Lovable.*Cursor.*Bolt.*v0.*Replit Agent/s);
+  assert.match(pipelineSource, /liveFindings: preliminaryIssues/);
+  assert.match(pipelineSource, /liveFindings: baseIssues/);
 });
 
 test("secondary routes render their own content and metadata", async () => {

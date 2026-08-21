@@ -71,6 +71,7 @@ export const scanJobStatusSchema = z.discriminatedUnion("stage", [
     jobId: z.string(),
     stage: z.enum(["queued", "rendering", "scanning", "generating-fixes"]),
     statusText: z.string(),
+    liveFindings: z.array(scanIssueBaseSchema).optional(),
   }),
   z.object({
     jobId: z.string(),
