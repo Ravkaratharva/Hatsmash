@@ -1,0 +1,11 @@
+export const SCAN_QUEUE_NAME = "hatsmash-scans";
+export const FREE_SCANS_PER_IP = Number(process.env.FREE_SCANS_PER_IP ?? 3);
+export const SCAN_JOB_TTL_SECONDS = Number(process.env.SCAN_JOB_TTL_SECONDS ?? 86_400);
+export const SCAN_WORKER_CONCURRENCY = Number(process.env.SCAN_WORKER_CONCURRENCY ?? 1);
+export const SCAN_PORT = Number(process.env.PORT ?? 8_788);
+
+export function requireRedisUrl() {
+  const value = process.env.REDIS_URL;
+  if (!value) throw new Error("REDIS_URL is required to start the Hatsmash scanner service.");
+  return value;
+}

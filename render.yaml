@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: hatsmash-scanner
+    runtime: docker
+    dockerfilePath: ./Dockerfile.scanner
+    plan: free
+    healthCheckPath: /healthz
+    autoDeployTrigger: commit
+    envVars:
+      - key: REDIS_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: https://hatsmash-audit.ravkaratharva01.chatgpt.site,http://localhost:3000
+      - key: TRUST_PROXY
+        value: "true"
+      - key: RUN_SCAN_WORKER
+        value: "true"
+      - key: FREE_SCANS_PER_IP
+        value: "3"
+      - key: SCAN_WORKER_CONCURRENCY
+        value: "1"
+      - key: IP_HASH_SALT
+        generateValue: true

@@ -59,6 +59,17 @@ test("scan experience remains available at /app", async () => {
   assert.doesNotMatch(html, /og\.png/i);
 });
 
+test("scan submit flow uses queued status polling instead of mock findings", async () => {
+  const pageSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  const routeSource = await readFile(new URL("../app/api/scan/route.ts", import.meta.url), "utf8");
+  const schemaSource = await readFile(new URL("../lib/scan-schema.ts", import.meta.url), "utf8");
+  assert.match(pageSource, /api\/scan-status/);
+  assert.match(pageSource, /Generating tool-specific fix prompts/);
+  assert.doesNotMatch(routeSource, /MOCK_FINDINGS|setTimeout\(resolve/);
+  assert.match(schemaSource, /scanIssueSchema/);
+  assert.match(schemaSource, /Lovable.*Cursor.*Bolt.*v0.*Replit Agent/s);
+});
+
 test("secondary routes render their own content and metadata", async () => {
   const routes = [
     ["/pricing", "Pricing — Hatsmash", "Free catches the issue"],

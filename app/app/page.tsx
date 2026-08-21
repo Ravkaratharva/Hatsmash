@@ -1,31 +1,30 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import type { ScanJobAccepted, ScanJobStatus, ScanResult, ScanStage } from "@/lib/scan-schema";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
-type Severity = "critical" | "warning" | "info";
 
-type Finding = {
-  id: string;
-  category: "Accessibility" | "Performance" | "SEO" | "AI-tell" | "Security";
-  severity: Severity;
-  title: string;
-  evidence: string;
-};
-
-type ScanResponse = {
-  url: string;
-  score: number;
-  scannedAt: string;
-  findings: Finding[];
-};
-
-const scanSteps = [
-  "Rendering the live page",
-  "Testing semantics and contrast",
-  "Reading network and metadata",
-  "Checking for AI-build leftovers",
+const scanSteps: Array<{ stage: Exclude<ScanStage, "done" | "failed">; label: string }> = [
+  { stage: "queued", label: "Waiting for an available scanner" },
+  { stage: "rendering", label: "Rendering the live page" },
+  { stage: "scanning", label: "Checking accessibility, performance, SEO, AI-tells, and security" },
+  { stage: "generating-fixes", label: "Generating tool-specific fix prompts" },
 ];
+
+const stageOrder = scanSteps.map((step) => step.stage);
+
+function errorMessage(payload: unknown, fallback: string) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) return fallback;
+  const error = (payload as { error?: unknown }).error;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") return error.message;
+  return fallback;
+}
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
 
 function normalizeUrl(value: string) {
   const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
@@ -37,8 +36,10 @@ function normalizeUrl(value: string) {
 export default function Home() {
   const [url, setUrl] = useState("");
   const [state, setState] = useState<ScanState>("idle");
+  const [stage, setStage] = useState<Exclude<ScanStage, "done" | "failed">>("queued");
+  const [statusText, setStatusText] = useState("Waiting for an available scanner…");
   const [error, setError] = useState("");
-  const [scan, setScan] = useState<ScanResponse | null>(null);
+  const [scan, setScan] = useState<ScanResult | null>(null);
 
   async function runScan(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,6 +63,8 @@ export default function Home() {
 
     setUrl(normalizedUrl);
     setState("scanning");
+    setStage("queued");
+    setStatusText("Waiting for an available scanner…");
 
     try {
       const response = await fetch("/api/scan", {
@@ -69,12 +72,33 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: normalizedUrl }),
       });
-      const payload = await response.json() as ScanResponse | { error?: string };
+      const payload = await response.json() as ScanJobAccepted | unknown;
       if (!response.ok) {
-        throw new Error("error" in payload && payload.error ? payload.error : "The scan failed before it could finish.");
+        throw new Error(errorMessage(payload, "The scan could not be started."));
       }
-      setScan(payload as ScanResponse);
-      setState("complete");
+      const accepted = payload as ScanJobAccepted;
+
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        if (attempt > 0) await wait(1_500);
+        const statusResponse = await fetch(`/api/scan-status/${encodeURIComponent(accepted.jobId)}`, { cache: "no-store" });
+        const statusPayload = await statusResponse.json() as ScanJobStatus | unknown;
+        if (!statusResponse.ok) {
+          throw new Error(errorMessage(statusPayload, "The scan status could not be checked."));
+        }
+
+        const current = statusPayload as ScanJobStatus;
+        if (current.stage === "failed") throw new Error(current.error.message);
+        if (current.stage === "done") {
+          setStatusText(current.statusText);
+          setScan(current.result);
+          setState("complete");
+          return;
+        }
+        setStage(current.stage);
+        setStatusText(current.statusText);
+      }
+
+      throw new Error("The audit is taking longer than expected. Please try again in a moment.");
     } catch (scanError) {
       setState("error");
       setError(scanError instanceof Error ? scanError.message : "The scan failed before it could finish. Please try again.");
@@ -168,8 +192,12 @@ export default function Home() {
 
               {state === "scanning" && (
                 <div className="scan-progress">
-                  {scanSteps.map((step, index) => (
-                    <p key={step} style={{ "--step-delay": `${index * 0.32}s` } as React.CSSProperties}><i />{step}</p>
+                  {scanSteps.map((stepItem, index) => (
+                    <p
+                      className={stageOrder.indexOf(stepItem.stage) < stageOrder.indexOf(stage) ? "is-done" : stepItem.stage === stage ? "is-active" : "is-pending"}
+                      key={stepItem.stage}
+                      style={{ "--step-delay": `${index * 0.32}s` } as React.CSSProperties}
+                    ><i />{stepItem.stage === stage ? statusText : stepItem.label}</p>
                   ))}
                 </div>
               )}
@@ -189,7 +217,7 @@ export default function Home() {
                     {scan.findings.slice(0, 3).map((finding) => (
                       <div className="finding" key={finding.id}>
                         <i className={finding.severity} />
-                        <div><span>{finding.category}</span><strong>{finding.title}</strong></div>
+                        <div><span>{finding.category}</span><strong>{finding.message}</strong></div>
                       </div>
                     ))}
                   </div>

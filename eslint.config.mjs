@@ -10,6 +10,7 @@ import tseslint from "typescript-eslint";
 const eslintConfig = defineConfig([
   globalIgnores([
     ".next/**",
+    ".scanner-dist/**",
     "dist/**",
     "out/**",
     "build/**",
@@ -34,6 +35,10 @@ const eslintConfig = defineConfig([
       react: {
         version: "detect",
       },
+    },
+    rules: {
+      // Vinext's deployed Link handler currently breaks navigation; native anchors are intentional.
+      "@next/next/no-html-link-for-pages": "off",
     },
   },
 ]);

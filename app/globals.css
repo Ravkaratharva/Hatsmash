@@ -350,8 +350,12 @@ h1 em { color: var(--finding-red); font-style: normal; }
 .reticle i { position: absolute; inset: 19px; border: 1px solid var(--finding-red); border-radius: 50%; }
 .rail-error > span { width: 48px; height: 48px; margin: 0 auto; display: grid; place-items: center; color: var(--finding-red); border: 1px solid var(--finding-red); border-radius: 50%; font: 500 1.6rem var(--font-evidence); }
 .scan-progress { margin: auto 0; }
-.scan-progress p { margin: 14px 0; color: #87969d; font: 500 .64rem/1.4 var(--font-evidence); animation: step-pulse 1.35s infinite; animation-delay: var(--step-delay); }
-.scan-progress i { display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: var(--caution-amber); }
+.scan-progress p { margin: 14px 0; color: #5d6b72; font: 500 .64rem/1.4 var(--font-evidence); }
+.scan-progress p.is-active { color: white; animation: step-pulse 1.35s infinite; animation-delay: var(--step-delay); }
+.scan-progress p.is-done { color: #92a098; }
+.scan-progress i { display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: #46535a; }
+.scan-progress .is-active i { background: var(--caution-amber); }
+.scan-progress .is-done i { background: var(--pass-teal); }
 .score-block { padding: 24px 0 19px; display: flex; align-items: end; gap: 9px; border-bottom: 1px solid #35434b; }
 .score-block strong { color: var(--caution-amber); font: 700 3.4rem/.8 var(--font-display); }
 .score-block span { color: #829098; font: 600 .55rem/1.45 var(--font-evidence); letter-spacing: .06em; }
