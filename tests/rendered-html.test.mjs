@@ -61,6 +61,7 @@ test("scan experience remains available at /app", async () => {
   assert.match(html, /Hero image has no alt text/);
   assert.match(html, /Placeholder copy is still visible/);
   assert.doesNotMatch(html, /Waiting for a URL/);
+  assert.doesNotMatch(html, /INSPECTING DOM|site-preview|annotation-slot/);
   assert.doesNotMatch(html, /og\.png/i);
 });
 

@@ -319,22 +319,6 @@ export default function Home() {
           </div>
 
           <div className="inspection-body">
-            <div className="site-preview" aria-hidden="true">
-              <div className="preview-nav"><i /><span /><span /><span /></div>
-              <div className="preview-hero-line wide" />
-              <div className="preview-hero-line" />
-              <div className="preview-copy" />
-              <div className="preview-copy short" />
-              <div className="preview-action" />
-              <div className="preview-cards"><i /><i /><i /></div>
-              {visibleFindings.map((finding, index) => (
-                <div className={`annotation annotation-slot-${index} ${finding.severity}`} key={finding.id}>
-                  <b>{categoryLabels[finding.category].badge}</b><span>{finding.message}</span>
-                </div>
-              ))}
-              <div className="scan-beam"><span>INSPECTING DOM</span></div>
-            </div>
-
             <aside className="findings-rail">
               <div className="rail-heading">
                 <div className="rail-title">
