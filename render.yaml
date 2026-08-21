@@ -19,5 +19,7 @@ services:
         value: "3"
       - key: SCAN_WORKER_CONCURRENCY
         value: "1"
+      - key: LIGHTHOUSE_TIMEOUT_MS
+        value: "75000"
       - key: IP_HASH_SALT
         generateValue: true

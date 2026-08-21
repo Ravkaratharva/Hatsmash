@@ -206,7 +206,7 @@ export default function Home() {
                 <div className="rail-error">
                   <span>×</span>
                   <strong>Couldn’t finish this scan</strong>
-                  <p>Check that the site is public and try again.</p>
+                  <p>{error || "Check that the site is public and try again."}</p>
                 </div>
               )}
 

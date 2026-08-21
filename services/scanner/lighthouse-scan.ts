@@ -2,6 +2,7 @@ import { launch } from "chrome-launcher";
 import lighthouse from "lighthouse";
 import { chromium } from "playwright";
 import type { IssueCategory, ScanIssueBase } from "../../lib/scan-schema.js";
+import { LIGHTHOUSE_TIMEOUT_MS } from "./config.js";
 import { ScanError } from "./errors.js";
 import { createIssue } from "./issues.js";
 
@@ -11,7 +12,7 @@ type LighthouseAudit = {
   description?: string;
   score: number | null;
   scoreDisplayMode?: string;
-  details?: { items?: Array<{ node?: { selector?: string }; url?: string }> };
+  details?: { items?: unknown };
 };
 
 type LighthouseResult = {
@@ -43,6 +44,15 @@ function severityForScore(score: number) {
   return "info" as const;
 }
 
+export function auditDetailLocation(details: { items?: unknown } | undefined, fallback: string) {
+  const detailItems = Array.isArray(details?.items)
+    ? details.items as Array<{ node?: { selector?: string }; url?: string }>
+    : [];
+  return detailItems.find((item) => item.node?.selector)?.node?.selector
+    ?? detailItems.find((item) => item.url)?.url
+    ?? fallback;
+}
+
 export async function runLighthouseScan(url: string) {
   const chrome = await launch({
     chromePath: chromium.executablePath(),
@@ -50,14 +60,39 @@ export async function runLighthouseScan(url: string) {
   });
 
   try {
-    const result = await lighthouse(url, {
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timeoutHandle = setTimeout(() => {
+        try {
+          chrome.kill();
+        } catch {
+          // The browser may already have stopped itself.
+        }
+        reject(new ScanError(
+          "AUDIT_TIMEOUT",
+          "The performance audit exceeded the free scanner’s time limit. Wait a moment for the scanner to warm up, then try again.",
+          408,
+        ));
+      }, LIGHTHOUSE_TIMEOUT_MS);
+      timeoutHandle.unref?.();
+    });
+
+    const audit = lighthouse(url, {
       port: chrome.port,
       output: "json",
       logLevel: "error",
       onlyCategories: ["accessibility", "performance", "seo"],
       formFactor: "mobile",
       screenEmulation: { mobile: true, width: 390, height: 844, deviceScaleFactor: 2, disabled: false },
-      throttlingMethod: "simulate",
+      // Simulation is CPU-heavy and can stall indefinitely on small free hosts.
+      // "provided" still measures the page while keeping the scan responsive.
+      throttlingMethod: "provided",
+      maxWaitForFcp: 10_000,
+      maxWaitForLoad: 25_000,
+      disableStorageReset: true,
+    });
+    const result = await Promise.race([audit, timeout]).finally(() => {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
     });
     if (!result) throw new ScanError("SCAN_FAILED", "Lighthouse could not inspect this page.", 500);
 
@@ -78,9 +113,7 @@ export async function runLighthouseScan(url: string) {
         if (["notApplicable", "manual", "informative"].includes(audit.scoreDisplayMode ?? "")) continue;
         if (ref.weight === 0 && hatsmashCategory !== "Performance") continue;
 
-        const location = audit.details?.items?.find((item) => item.node?.selector)?.node?.selector
-          ?? audit.details?.items?.find((item) => item.url)?.url
-          ?? lhr.finalDisplayedUrl;
+        const location = auditDetailLocation(audit.details, lhr.finalDisplayedUrl);
         issues.push(createIssue({
           category: hatsmashCategory,
           severity: severityForScore(audit.score),
@@ -97,6 +130,8 @@ export async function runLighthouseScan(url: string) {
     return { issues, ruleIds, scores };
   } catch (error) {
     if (error instanceof ScanError) throw error;
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[scanner] Lighthouse failed: ${detail}`);
     throw new ScanError("SCAN_FAILED", "The performance and SEO audit could not finish for this page.", 500);
   } finally {
     try {

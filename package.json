@@ -10,7 +10,7 @@
     "build": "vinext build",
     "start": "vinext start",
     "test": "npm run build && node --test tests/rendered-html.test.mjs && npm run test:scanner",
-    "test:scanner": "npm run scanner:build && node --test .scanner-dist/services/scanner/heuristics/heuristics.test.js .scanner-dist/services/scanner/fix-prompts.test.js .scanner-dist/services/scanner/security-scan.test.js .scanner-dist/services/scanner/url-safety.test.js",
+    "test:scanner": "npm run scanner:build && node --test .scanner-dist/services/scanner/heuristics/heuristics.test.js .scanner-dist/services/scanner/fix-prompts.test.js .scanner-dist/services/scanner/lighthouse-scan.test.js .scanner-dist/services/scanner/security-scan.test.js .scanner-dist/services/scanner/url-safety.test.js",
     "scanner:build": "tsc -p tsconfig.scanner.json",
     "scanner:dev": "tsx watch services/scanner/server.ts",
     "scanner:start": "node .scanner-dist/services/scanner/server.js",

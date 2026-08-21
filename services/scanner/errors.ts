@@ -4,6 +4,7 @@ export type ScanErrorCode =
   | "UNREACHABLE_URL"
   | "PAGE_TIMEOUT"
   | "HEADLESS_BLOCKED"
+  | "AUDIT_TIMEOUT"
   | "QUOTA_EXCEEDED"
   | "SCAN_FAILED";
 
