@@ -60,6 +60,9 @@ test("scan experience remains available at /app", async () => {
   assert.match(html, /Connect GitHub/);
   assert.match(html, /Unlock GitHub connection/);
   assert.match(html, /href="\/pricing"/);
+  assert.match(html, /href="\/community"[^>]*>Community/i);
+  assert.match(html, /href="\/app"[^>]*>Smash It/i);
+  assert.doesNotMatch(html, /Back to site/i);
   assert.match(html, /Switch to light mode/);
   assert.match(html, /DEMO FINDINGS/);
   assert.match(html, /Page title is 74 characters/);

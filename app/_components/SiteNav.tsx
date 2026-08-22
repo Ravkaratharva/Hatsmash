@@ -42,7 +42,7 @@ export function SiteNav({ current = "" }: { current?: string }) {
         <a href="/login">Log In</a>
         <a className="signup-link" href="/signup">Sign Up</a>
         <ThemeToggle compact />
-        <a className="smash-nav-cta" href="/app">Smash It <span aria-hidden="true">→</span></a>
+        <a className={current === "app" ? "smash-nav-cta active" : "smash-nav-cta"} href="/app">Smash It <span aria-hidden="true">→</span></a>
       </nav>
     </header>
   );

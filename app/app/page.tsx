@@ -10,7 +10,7 @@ import {
   type ScanResult,
   type ScanStage,
 } from "@/lib/scan-schema";
-import { ThemeToggle } from "../_components/ThemeToggle";
+import { SiteNav } from "../_components/SiteNav";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
 
@@ -256,15 +256,7 @@ export default function Home() {
 
   return (
     <main className="audit-app-shell">
-      <header className="audit-app-header">
-        <a className="logo-link" href="/" aria-label="Hatsmash home">
-          <img src="/hatsmash-logo.png" width="378" height="153" alt="Hatsmash" />
-        </a>
-        <div className="audit-header-actions">
-          <a href="/">Back to site</a>
-          <ThemeToggle />
-        </div>
-      </header>
+      <SiteNav current="app" />
 
       <section className="audit-workspace" id="top">
         <div className="audit-workspace-heading">

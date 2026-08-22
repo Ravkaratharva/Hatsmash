@@ -390,7 +390,7 @@ h1 em { color: var(--finding-red); font-style: normal; }
   align-items: center;
   justify-content: space-between;
   color: white;
-  background: rgba(18, 25, 31, .96);
+  background: #1c2328;
   border-bottom: 1px solid #344149;
   backdrop-filter: blur(14px);
 }
@@ -562,7 +562,7 @@ h1 em { color: var(--finding-red); font-style: normal; }
   .marketing-nav { min-height: 74px; padding: 0 15px; }
   .marketing-logo { width: 175px; height: 66px; }.marketing-logo img { width: 175px; }
   .menu-toggle { display: block; }
-  .nav-links { position: absolute; left: 0; right: 0; top: 74px; max-height: 0; overflow: hidden; padding: 0 20px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; background: var(--audit-ink); border-bottom: 1px solid #415058; opacity: 0; pointer-events: none; transition: max-height 220ms ease, opacity 160ms ease, padding 220ms ease; }
+  .nav-links { position: absolute; left: 0; right: 0; top: 74px; max-height: 0; overflow: hidden; padding: 0 20px; display: flex; flex-direction: column; align-items: stretch; gap: 2px; background: #1c2328; border-bottom: 1px solid #415058; opacity: 0; pointer-events: none; transition: max-height 220ms ease, opacity 160ms ease, padding 220ms ease; }
   .nav-links.is-open { max-height: 520px; padding-top: 15px; padding-bottom: 20px; opacity: 1; pointer-events: auto; }
   .nav-links > a { padding: 12px; }.nav-links > a:not(.smash-nav-cta)::after, .nav-divider { display: none; }.nav-links .smash-nav-cta { margin-top: 8px; }
   .landing-hero { width: calc(100% - 30px); padding: 54px 0 70px; gap: 55px; }.landing-copy h1, .inner-hero h1 { font-size: clamp(3.7rem, 17vw, 5.7rem); }
@@ -619,34 +619,6 @@ html[data-theme="light"] .theme-toggle-icon i { inset: 3px; transform: none; }
     #0b1116;
   background-size: auto, 48px 48px, 48px 48px, auto;
 }
-.audit-app-header {
-  position: sticky;
-  z-index: 30;
-  top: 0;
-  min-height: 78px;
-  padding: 0 max(24px, calc((100vw - 1440px) / 2));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  background: rgba(11, 17, 22, .9);
-  border-bottom: 1px solid #293840;
-  backdrop-filter: blur(18px);
-}
-.audit-app-header .logo-link { width: 190px; height: 68px; }
-.audit-app-header .logo-link img { width: 190px; }
-.audit-header-actions { display: flex; align-items: center; gap: 10px; }
-.audit-header-actions > a {
-  min-height: 39px;
-  padding: 0 12px;
-  display: inline-flex;
-  align-items: center;
-  color: #9caab1;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  font: 600 .68rem/1 var(--font-evidence);
-}
-.audit-header-actions > a:hover { color: white; border-color: #33434c; }
 .audit-workspace { width: min(1440px, calc(100% - 48px)); margin: 0 auto; padding: 54px 0 42px; }
 .audit-workspace-heading { margin-bottom: 31px; display: grid; grid-template-columns: minmax(420px, 1fr) minmax(320px, 520px); align-items: end; gap: 48px; }
 .audit-workspace-heading .eyebrow { margin-bottom: 13px; color: #7f9098; }
@@ -725,9 +697,6 @@ html[data-theme="dark"] .submission-footer { border-color: #34434b; }
 /* Light mode keeps the report contrast while lifting the workspace chrome. */
 html[data-theme="light"] body { background: var(--canvas-mist); color: var(--audit-ink); }
 html[data-theme="light"] .audit-app-shell { color: var(--audit-ink); background: var(--canvas-mist); }
-html[data-theme="light"] .audit-app-header { background: rgba(243, 246, 247, .92); border-color: #c8d3d7; }
-html[data-theme="light"] .audit-header-actions > a { color: #57676f; }
-html[data-theme="light"] .audit-header-actions > a:hover { color: var(--audit-ink); border-color: #bec9ce; }
 html[data-theme="light"] .theme-toggle { color: #26343b; background: white; border-color: #b6c2c7; }
 html[data-theme="light"] .audit-workspace-heading h1 { color: var(--audit-ink); }
 html[data-theme="light"] .audit-workspace-heading > p { color: #5c6d75; }
@@ -747,10 +716,6 @@ html[data-theme="light"] .github-pro-card > a { color: var(--audit-ink); backgro
 }
 
 @media (max-width: 680px) {
-  .audit-app-header { min-height: 70px; padding: 0 15px; }
-  .audit-app-header .logo-link { width: 158px; height: 61px; }
-  .audit-app-header .logo-link img { width: 158px; }
-  .audit-header-actions > a { display: none; }
   .audit-workspace { width: calc(100% - 30px); padding-top: 38px; }
   .audit-workspace-heading h1 { font-size: clamp(3.4rem, 17vw, 5rem); }
   .audit-scan-form, .github-pro-card { padding: 17px; }
