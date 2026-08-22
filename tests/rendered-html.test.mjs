@@ -53,9 +53,14 @@ test("internal navigation uses native links so deployed clicks cannot be interce
 test("scan experience remains available at /app", async () => {
   const html = await htmlFor("/app");
   assert.match(html, /<title>Run a Scan — Hatsmash<\/title>/i);
+  assert.match(html, /Website analysis/);
   assert.match(html, /Paste your URL/);
-  assert.match(html, /Scan this site/);
+  assert.match(html, /Scan website/);
   assert.match(html, /Three free scans per day\./);
+  assert.match(html, /Connect GitHub/);
+  assert.match(html, /Unlock GitHub connection/);
+  assert.match(html, /href="\/pricing"/);
+  assert.match(html, /Switch to light mode/);
   assert.match(html, /DEMO FINDINGS/);
   assert.match(html, /Page title is 74 characters/);
   assert.match(html, /Hero image has no alt text/);

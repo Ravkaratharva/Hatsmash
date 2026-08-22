@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function SiteNav({ current = "" }: { current?: string }) {
   const [open, setOpen] = useState(false);
@@ -40,6 +41,7 @@ export function SiteNav({ current = "" }: { current?: string }) {
         <span className="nav-divider" aria-hidden="true" />
         <a href="/login">Log In</a>
         <a className="signup-link" href="/signup">Sign Up</a>
+        <ThemeToggle compact />
         <a className="smash-nav-cta" href="/app">Smash It <span aria-hidden="true">→</span></a>
       </nav>
     </header>

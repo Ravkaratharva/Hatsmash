@@ -10,6 +10,7 @@ import {
   type ScanResult,
   type ScanStage,
 } from "@/lib/scan-schema";
+import { ThemeToggle } from "../_components/ThemeToggle";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
 
@@ -174,8 +175,7 @@ export default function Home() {
   const filteredFindings = activeCategory
     ? sourceFindings.filter((finding) => finding.category === activeCategory)
     : sourceFindings;
-  const hiddenFindingCount = Math.max(0, filteredFindings.length - 6);
-  const visibleFindings = filteredFindings.slice(-6);
+  const visibleFindings = filteredFindings;
   const severityCounts = {
     critical: filteredFindings.filter((finding) => finding.severity === "critical").length,
     warning: filteredFindings.filter((finding) => finding.severity === "warning").length,
@@ -255,24 +255,33 @@ export default function Home() {
   }
 
   return (
-    <main className="page-shell">
-      <header className="site-header">
+    <main className="audit-app-shell">
+      <header className="audit-app-header">
         <a className="logo-link" href="/" aria-label="Hatsmash home">
           <img src="/hatsmash-logo.png" width="378" height="153" alt="Hatsmash" />
         </a>
-        <p><span aria-hidden="true" /> App · free scan · no login</p>
+        <div className="audit-header-actions">
+          <a href="/">Back to site</a>
+          <ThemeToggle />
+        </div>
       </header>
 
-      <section className="hero" id="top">
-        <div className="hero-copy">
-          <p className="eyebrow"><span aria-hidden="true">↳</span> Website QA for AI-built sites</p>
-          <h1>Paste your URL.<br /><em>Fix what AI missed.</em></h1>
-          <p className="hero-intro">
-            Hatsmash checks the site your AI builder shipped, then turns every issue into an exact prompt for Lovable, Cursor, Bolt, v0, or Replit.
-          </p>
+      <section className="audit-workspace" id="top">
+        <div className="audit-workspace-heading">
+          <div>
+            <p className="eyebrow"><span aria-hidden="true">↳</span> Hatsmash analysis workspace</p>
+            <h1>Website <em>analysis.</em></h1>
+          </div>
+          <p>Paste your URL to inspect accessibility, performance, SEO, AI-tells, and security in one focused report.</p>
+        </div>
 
-          <form className="scan-form" onSubmit={runScan} noValidate>
-            <label htmlFor="site-url">Website to inspect</label>
+        <div className="audit-control-grid">
+          <form className="scan-form audit-scan-form" onSubmit={runScan} noValidate>
+            <div className="audit-control-heading">
+              <div><span>01</span><strong>Scan a live website</strong></div>
+              <small>3 free scans daily</small>
+            </div>
+            <label htmlFor="site-url">Website URL</label>
             <div className={`input-row ${error ? "has-error" : ""}`}>
               <span className="protocol" aria-hidden="true">https://</span>
               <input
@@ -294,24 +303,32 @@ export default function Home() {
                 aria-describedby={error ? "scan-error" : "scan-note"}
               />
               <button type="submit" disabled={state === "scanning"}>
-                {state === "scanning" ? "Inspecting…" : state === "complete" ? "Scan again" : "Scan this site"}
+                {state === "scanning" ? "Inspecting…" : state === "complete" ? "Scan again" : "Scan website"}
                 <span aria-hidden="true">→</span>
               </button>
             </div>
             {error ? (
               <p className="form-message error-message" id="scan-error" role="alert"><b>Scan stopped.</b> {error}</p>
             ) : (
-              <p className="form-message" id="scan-note">No repo access. No account. Three free scans per day.</p>
+              <p className="form-message" id="scan-note">No account required. Three free scans per day.</p>
             )}
           </form>
 
-          <div className="builder-line" aria-label="Supported AI website builders">
-            <span>Fix prompts for</span>
-            <b>Lovable</b><b>Cursor</b><b>Bolt</b><b>v0</b><b>Replit</b>
-          </div>
+          <aside className="github-pro-card" aria-label="GitHub connection for Pro users">
+            <div className="audit-control-heading">
+              <div><span>02</span><strong>Connect GitHub</strong></div>
+              <small className="pro-badge">Pro</small>
+            </div>
+            <p>Link the report to your repository and map findings to the exact files that need attention.</p>
+            <a href="/pricing" title="GitHub connection is included with Hatsmash Pro">
+              <span className="github-mark" aria-hidden="true">GH</span>
+              Unlock GitHub connection
+              <b aria-hidden="true">→</b>
+            </a>
+          </aside>
         </div>
 
-        <div className={`inspection-window ${state}`} aria-live="polite" aria-label="Website inspection preview">
+        <section className={`inspection-window audit-results ${state}`} aria-live="polite" aria-label="Website analysis results">
           <div className="browser-bar">
             <div className="browser-dots" aria-hidden="true"><i /><i /><i /></div>
             <div className="address-bar"><span aria-hidden="true">⌁</span>{url || "hatsmash-demo.site"}</div>
@@ -319,12 +336,13 @@ export default function Home() {
           </div>
 
           <div className="inspection-body">
-            <aside className="findings-rail">
+            <div className="findings-rail">
               <div className="rail-heading">
                 <div className="rail-title">
                   <span>{state === "idle" ? "DEMO FINDINGS" : "LIVE FINDINGS"}</span>
                   <b>{filteredFindings.length}<small>{filteredFindings.length === 1 ? " issue" : " issues"}</small></b>
                 </div>
+                {scan && <div className="analysis-score"><strong>{scan.score}</strong><span>/100<br />Hatsmash score</span></div>}
                 <div className="severity-counts" aria-label="Finding severity counts">
                   <span className="critical"><i />{severityCounts.critical}<small>critical</small></span>
                   <span className="warning"><i />{severityCounts.warning}<small>warning</small></span>
@@ -358,7 +376,6 @@ export default function Home() {
 
               {state !== "error" && visibleFindings.length > 0 && (
                 <div className="finding-list">
-                  {hiddenFindingCount > 0 && <p className="more-findings">+{hiddenFindingCount} earlier {hiddenFindingCount === 1 ? "issue" : "issues"}</p>}
                   {visibleFindings.map((finding) => (
                     <div className="finding" key={finding.id}>
                       <div className="finding-meta">
@@ -371,7 +388,7 @@ export default function Home() {
                   ))}
                 </div>
               )}
-            </aside>
+            </div>
           </div>
 
           <div className="category-strip" aria-label="Filter findings by category">
@@ -388,7 +405,13 @@ export default function Home() {
               </button>
             ))}
           </div>
-        </div>
+        </section>
+
+        <footer className="audit-workspace-footer">
+          <span><i /> Live browser inspection</span>
+          <span>Fix prompts for Lovable, Cursor, Bolt, v0, and Replit</span>
+          <a href="/pricing">Compare plans →</a>
+        </footer>
       </section>
     </main>
   );
