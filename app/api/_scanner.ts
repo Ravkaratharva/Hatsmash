@@ -9,6 +9,22 @@ function clientIp(request: Request) {
     ?? "unknown";
 }
 
+const SCANNER_TIMEOUT_MS = 20_000;
+const transientScannerStatuses = new Set([502, 503, 504, 520, 521, 522, 523, 524]);
+
+function scannerUnavailableResponse(message = "The scanner is warming up. Hatsmash will retry automatically.") {
+  return Response.json(
+    { error: { code: "SCANNER_WAKING", message } },
+    { status: 503, headers: { "retry-after": "4", "cache-control": "no-store" } },
+  );
+}
+
+function isJsonResponse(response: Response, body: string) {
+  const contentType = response.headers.get("content-type") ?? "";
+  const firstCharacter = body.trimStart()[0];
+  return contentType.includes("application/json") || firstCharacter === "{" || firstCharacter === "[";
+}
+
 export async function forwardScannerRequest(request: Request, path: string, method: "GET" | "POST") {
   const baseUrl = scannerBaseUrl();
   if (!baseUrl) {
@@ -30,15 +46,32 @@ export async function forwardScannerRequest(request: Request, path: string, meth
       headers,
       body: method === "POST" ? await request.text() : undefined,
       redirect: "manual",
+      signal: AbortSignal.timeout(SCANNER_TIMEOUT_MS),
     });
-    return new Response(response.body, {
+
+    const body = await response.text();
+    if (transientScannerStatuses.has(response.status)) {
+      return scannerUnavailableResponse();
+    }
+    if (!isJsonResponse(response, body)) {
+      return Response.json(
+        {
+          error: {
+            code: "SCANNER_BAD_RESPONSE",
+            message: response.ok
+              ? "The scanner returned an incomplete response. Please try again."
+              : "The scanner could not complete that request. Please try again.",
+          },
+        },
+        { status: response.ok ? 502 : response.status, headers: { "cache-control": "no-store" } },
+      );
+    }
+
+    return new Response(body, {
       status: response.status,
-      headers: { "content-type": response.headers.get("content-type") ?? "application/json" },
+      headers: { "content-type": "application/json", "cache-control": "no-store" },
     });
   } catch {
-    return Response.json(
-      { error: { code: "SCANNER_UNAVAILABLE", message: "The scanner is waking up or temporarily unavailable. Wait a minute and try again." } },
-      { status: 503 },
-    );
+    return scannerUnavailableResponse("The scanner is taking longer than expected to wake up. Hatsmash will retry automatically.");
   }
 }

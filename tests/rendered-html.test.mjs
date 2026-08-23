@@ -82,13 +82,28 @@ test("demo findings stop at submission and the live scan streams real findings",
   assert.match(pageSource, /Generating tool-specific fix prompts/);
   assert.match(pageSource, /state === "idle"[\s\S]*demoFindings\.slice/);
   assert.match(pageSource, /current\.liveFindings/);
+  assert.match(pageSource, /readJsonResponse/);
+  assert.match(pageSource, /Scanner is warming up… retry/);
+  assert.match(pageSource, /isTransientScannerFailure/);
+  assert.match(pageSource, /crypto\.randomUUID\(\)/);
+  assert.match(pageSource, /requestId/);
   assert.match(pageSource, /aria-label="Filter findings by category"/);
+  const proxySource = await readFile(new URL("../app/api/_scanner.ts", import.meta.url), "utf8");
+  assert.match(proxySource, /AbortSignal\.timeout\(SCANNER_TIMEOUT_MS\)/);
+  assert.match(proxySource, /SCANNER_WAKING/);
+  assert.match(proxySource, /transientScannerStatuses/);
+  assert.match(proxySource, /response\.text\(\)/);
+  assert.doesNotMatch(proxySource, /new Response\(response\.body/);
   assert.doesNotMatch(routeSource, /MOCK_FINDINGS|setTimeout\(resolve/);
   assert.match(schemaSource, /scanIssueSchema/);
   assert.match(schemaSource, /liveFindings: z\.array\(scanIssueBaseSchema\)\.optional/);
   assert.match(schemaSource, /Lovable.*Cursor.*Bolt.*v0.*Replit Agent/s);
   assert.match(pipelineSource, /liveFindings: preliminaryIssues/);
   assert.match(pipelineSource, /liveFindings: baseIssues/);
+  const scannerServerSource = await readFile(new URL("../services/scanner/server.ts", import.meta.url), "utf8");
+  assert.match(scannerServerSource, /scanResultSchema\.safeParse/);
+  assert.match(scannerServerSource, /Finalizing verified audit results/);
+  assert.match(scannerServerSource, /existingJob/);
 });
 
 test("secondary routes render their own content and metadata", async () => {

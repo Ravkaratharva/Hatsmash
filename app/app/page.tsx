@@ -122,6 +122,36 @@ function errorMessage(payload: unknown, fallback: string) {
   return fallback;
 }
 
+function errorCode(payload: unknown) {
+  if (!payload || typeof payload !== "object" || !("error" in payload)) return "";
+  const error = (payload as { error?: unknown }).error;
+  return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "";
+}
+
+async function readJsonResponse(response: Response) {
+  const body = await response.text();
+  if (!body) return null;
+  try {
+    return JSON.parse(body) as unknown;
+  } catch {
+    return {
+      error: {
+        code: "INVALID_SCANNER_RESPONSE",
+        message: response.ok
+          ? "The scanner returned an incomplete response. Please try again."
+          : "The scanner is temporarily unavailable. Please try again shortly.",
+      },
+    };
+  }
+}
+
+function isTransientScannerFailure(response: Response, payload: unknown) {
+  return response.status === 502
+    || response.status === 503
+    || response.status === 504
+    || errorCode(payload) === "SCANNER_WAKING";
+}
+
 function wait(milliseconds: number) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
@@ -214,22 +244,38 @@ export default function Home() {
     setStatusText("Waiting for an available scanner…");
 
     try {
-      const response = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: normalizedUrl }),
-      });
-      const payload = await response.json() as ScanJobAccepted | unknown;
-      if (!response.ok) {
+      const requestId = crypto.randomUUID();
+      let accepted: ScanJobAccepted | null = null;
+      for (let startAttempt = 0; startAttempt < 4; startAttempt += 1) {
+        if (startAttempt > 0) {
+          setStatusText(`Scanner is warming up… retry ${startAttempt + 1} of 4`);
+          await wait(3_500);
+        }
+
+        const response = await fetch("/api/scan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: normalizedUrl, requestId }),
+        });
+        const payload = await readJsonResponse(response) as ScanJobAccepted | unknown;
+        if (response.ok) {
+          accepted = payload as ScanJobAccepted;
+          break;
+        }
+        if (isTransientScannerFailure(response, payload) && startAttempt < 3) continue;
         throw new Error(errorMessage(payload, "The scan could not be started."));
       }
-      const accepted = payload as ScanJobAccepted;
+      if (!accepted) throw new Error("The scanner is still waking up. Please wait a minute and try again.");
 
-      for (let attempt = 0; attempt < 90; attempt += 1) {
+      for (let attempt = 0; attempt < 160; attempt += 1) {
         if (attempt > 0) await wait(1_500);
         const statusResponse = await fetch(`/api/scan-status/${encodeURIComponent(accepted.jobId)}`, { cache: "no-store" });
-        const statusPayload = await statusResponse.json() as ScanJobStatus | unknown;
+        const statusPayload = await readJsonResponse(statusResponse) as ScanJobStatus | unknown;
         if (!statusResponse.ok) {
+          if (isTransientScannerFailure(statusResponse, statusPayload)) {
+            setStatusText("Reconnecting to the live scanner…");
+            continue;
+          }
           throw new Error(errorMessage(statusPayload, "The scan status could not be checked."));
         }
 

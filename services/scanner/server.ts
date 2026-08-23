@@ -16,7 +16,10 @@ const app = Fastify({
   bodyLimit: 32_768,
 });
 const infrastructure = createScanInfrastructure();
-const submitSchema = z.object({ url: z.string().trim().min(1).max(2_048) });
+const submitSchema = z.object({
+  url: z.string().trim().min(1).max(2_048),
+  requestId: z.uuid().optional(),
+});
 const allowedOrigins = new Set(
   (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000")
     .split(",")
@@ -45,9 +48,20 @@ app.post("/api/scan", async (request, reply) => {
   try {
     const parsed = submitSchema.parse(request.body);
     const url = await assertPublicUrl(parsed.url);
+    const jobId = parsed.requestId ?? randomUUID();
+    const existingJob = parsed.requestId ? await infrastructure.queue.getJob(jobId) : undefined;
+    if (existingJob) {
+      if (existingJob.data.url !== url) {
+        return reply.code(409).send({ error: { code: "REQUEST_CONFLICT", message: "Start a new scan request for this URL." } });
+      }
+      return reply.code(202).send({
+        jobId,
+        stage: "queued",
+        remainingFreeScans: existingJob.data.remainingFreeScans,
+      });
+    }
     const quota = await consumeFreeScan(infrastructure.quotaConnection, request.ip);
-    const jobId = randomUUID();
-    await infrastructure.queue.add("scan", { url }, { jobId });
+    await infrastructure.queue.add("scan", { url, remainingFreeScans: quota.remaining }, { jobId });
     return reply.code(202).send({ jobId, stage: "queued", remainingFreeScans: quota.remaining });
   } catch (error) {
     const publicError = toPublicScanError(error);
@@ -67,12 +81,21 @@ app.get<{ Params: { jobId: string } }>("/api/scan-status/:jobId", async (request
 
   const state = await job.getState();
   if (state === "completed") {
-    return {
+    const completedJob = await infrastructure.queue.getJob(request.params.jobId);
+    const parsedResult = scanResultSchema.safeParse(completedJob?.returnvalue);
+    if (parsedResult.success) {
+      return {
+        jobId: job.id,
+        stage: "done",
+        statusText: "Audit complete.",
+        result: parsedResult.data,
+      };
+    }
+    return reply.code(202).send({
       jobId: job.id,
-      stage: "done",
-      statusText: "Audit complete.",
-      result: scanResultSchema.parse(job.returnvalue),
-    };
+      stage: "generating-fixes",
+      statusText: "Finalizing verified audit results…",
+    });
   }
   if (state === "failed") {
     return {

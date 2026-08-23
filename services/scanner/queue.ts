@@ -5,7 +5,7 @@ import { SCAN_JOB_TTL_SECONDS, SCAN_QUEUE_NAME, SCAN_WORKER_CONCURRENCY, require
 import { encodeWorkerError } from "./errors.js";
 import { runScanPipeline, type ScanProgress } from "./pipeline.js";
 
-export type ScanJobData = { url: string };
+export type ScanJobData = { url: string; remainingFreeScans: number };
 
 function createRedisConnection() {
   return new Redis(requireRedisUrl(), {
@@ -21,7 +21,8 @@ export function createScanInfrastructure() {
   const queue = new Queue<ScanJobData, ScanResult>(SCAN_QUEUE_NAME, {
     connection: queueConnection,
     defaultJobOptions: {
-      attempts: 1,
+      attempts: 2,
+      backoff: { type: "exponential", delay: 3_000 },
       removeOnComplete: { age: SCAN_JOB_TTL_SECONDS, count: 1_000 },
       removeOnFail: { age: SCAN_JOB_TTL_SECONDS, count: 1_000 },
     },

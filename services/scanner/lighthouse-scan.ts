@@ -22,6 +22,7 @@ type LighthouseResult = {
     score: number | null;
     auditRefs: Array<{ id: string; weight: number }>;
   }>;
+  runtimeError?: { code?: string; message?: string };
 };
 
 const categoryMap: Record<string, IssueCategory> = {
@@ -51,6 +52,21 @@ export function auditDetailLocation(details: { items?: unknown } | undefined, fa
   return detailItems.find((item) => item.node?.selector)?.node?.selector
     ?? detailItems.find((item) => item.url)?.url
     ?? fallback;
+}
+
+export function assertCompleteLighthouseResult(result: LighthouseResult) {
+  if (result.runtimeError?.code) {
+    throw new ScanError("AUDIT_INCOMPLETE", "The browser audit could not load this page reliably. Hatsmash will retry once.", 503);
+  }
+
+  const requiredCategories = ["accessibility", "performance", "seo"];
+  const incomplete = requiredCategories.some((categoryName) => {
+    const category = result.categories[categoryName];
+    return !category || typeof category.score !== "number" || !Array.isArray(category.auditRefs) || category.auditRefs.length === 0;
+  });
+  if (incomplete || !result.audits || Object.keys(result.audits).length === 0) {
+    throw new ScanError("AUDIT_INCOMPLETE", "The browser audit returned incomplete evidence. Hatsmash will retry once.", 503);
+  }
 }
 
 export async function runLighthouseScan(url: string) {
@@ -97,6 +113,7 @@ export async function runLighthouseScan(url: string) {
     if (!result) throw new ScanError("SCAN_FAILED", "Lighthouse could not inspect this page.", 500);
 
     const lhr = result.lhr as unknown as LighthouseResult;
+    assertCompleteLighthouseResult(lhr);
     const issues: ScanIssueBase[] = [];
     const ruleIds = new Set<string>();
     const scores = {
