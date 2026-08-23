@@ -120,7 +120,7 @@ test("secondary routes render their own content and metadata", async () => {
     ["/pricing", "Pricing — Hatsmash", "Free catches the issue"],
     ["/community", "Community — Hatsmash", "most smashable sites"],
     ["/login", "Log In — Hatsmash", "Log in and keep smashing"],
-    ["/signup", "Sign Up — Hatsmash", "Save the sites you smash"],
+    ["/signup", "Sign Up — Hatsmash", "Create your Hatsmash account"],
   ];
 
   for (const [path, title, content] of routes) {
@@ -128,5 +128,15 @@ test("secondary routes render their own content and metadata", async () => {
     assert.match(html, new RegExp(`<title>${title}<\\/title>`, "i"));
     assert.match(html, new RegExp(content, "i"));
     assert.doesNotMatch(html, /og\.png/i);
+  }
+});
+
+test("authentication pages use the secure email-code flow without blocking anonymous scans", async () => {
+  for (const path of ["/login", "/signup"]) {
+    const html = await htmlFor(path);
+    assert.match(html, /one-time verification code/i);
+    assert.match(html, /No password required/i);
+    assert.match(html, /anonymous website scans remain available/i);
+    assert.doesNotMatch(html, /type="password"|authentication is not connected/i);
   }
 });

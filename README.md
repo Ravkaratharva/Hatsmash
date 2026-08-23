@@ -45,3 +45,5 @@ The smoke test audits the W3C Before and After accessibility demo pages and prin
 `render.yaml` and `Dockerfile.scanner` define the free Render Web Service. During creation, set `REDIS_URL` to the full Upstash `rediss://` TCP connection. After Render provides the service URL, set `SCANNER_SERVICE_URL` on the Sites frontend and redeploy it.
 
 Do not commit `.env.local`, Redis credentials, API keys, or generated scan output.
+
+Passwordless account access requires the exact Supabase and Turnstile configuration in [docs/supabase-auth-setup.md](docs/supabase-auth-setup.md). Anonymous scans do not require an account.
