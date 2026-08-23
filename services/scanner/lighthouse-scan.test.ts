@@ -20,3 +20,15 @@ test("incomplete Lighthouse output is rejected instead of becoming a misleading 
     (error: unknown) => error instanceof Error && error.message.includes("incomplete evidence"),
   );
 });
+
+test("a focused Lighthouse pass is accepted only when its requested category is complete", () => {
+  assert.doesNotThrow(() => assertCompleteLighthouseResult({
+    finalDisplayedUrl: "https://example.com/",
+    audits: {
+      "document-title": { id: "document-title", title: "Document has a title", score: 1 },
+    },
+    categories: {
+      seo: { score: 1, auditRefs: [{ id: "document-title", weight: 1 }] },
+    },
+  }, ["seo"]));
+});

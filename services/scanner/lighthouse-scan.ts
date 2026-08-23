@@ -54,25 +54,38 @@ export function auditDetailLocation(details: { items?: unknown } | undefined, fa
     ?? fallback;
 }
 
-export function assertCompleteLighthouseResult(result: LighthouseResult) {
+export function assertCompleteLighthouseResult(
+  result: LighthouseResult,
+  requiredCategories = ["accessibility", "performance", "seo"],
+) {
   if (result.runtimeError?.code) {
-    throw new ScanError("AUDIT_INCOMPLETE", "The browser audit could not load this page reliably. Hatsmash will retry once.", 503);
+    throw new ScanError("AUDIT_INCOMPLETE", "The browser audit could not load this page reliably. Hatsmash will retry automatically.", 503);
   }
 
-  const requiredCategories = ["accessibility", "performance", "seo"];
   const incomplete = requiredCategories.some((categoryName) => {
     const category = result.categories[categoryName];
     return !category || typeof category.score !== "number" || !Array.isArray(category.auditRefs) || category.auditRefs.length === 0;
   });
   if (incomplete || !result.audits || Object.keys(result.audits).length === 0) {
-    throw new ScanError("AUDIT_INCOMPLETE", "The browser audit returned incomplete evidence. Hatsmash will retry once.", 503);
+    throw new ScanError("AUDIT_INCOMPLETE", "The browser audit returned incomplete evidence. Hatsmash will retry automatically.", 503);
   }
 }
 
-export async function runLighthouseScan(url: string) {
+async function runLighthousePass(url: string, onlyCategories: string[]) {
   const chrome = await launch({
     chromePath: chromium.executablePath(),
-    chromeFlags: ["--headless=new", "--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+    chromeFlags: [
+      "--headless=new",
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-background-networking",
+      "--disable-extensions",
+      "--disable-sync",
+      "--metrics-recording-only",
+      "--mute-audio",
+      "--no-first-run",
+    ],
   });
 
   try {
@@ -97,14 +110,14 @@ export async function runLighthouseScan(url: string) {
       port: chrome.port,
       output: "json",
       logLevel: "error",
-      onlyCategories: ["accessibility", "performance", "seo"],
+      onlyCategories,
       formFactor: "mobile",
       screenEmulation: { mobile: true, width: 390, height: 844, deviceScaleFactor: 2, disabled: false },
       // Simulation is CPU-heavy and can stall indefinitely on small free hosts.
       // "provided" still measures the page while keeping the scan responsive.
       throttlingMethod: "provided",
-      maxWaitForFcp: 10_000,
-      maxWaitForLoad: 25_000,
+      maxWaitForFcp: 30_000,
+      maxWaitForLoad: 45_000,
       disableStorageReset: true,
     });
     const result = await Promise.race([audit, timeout]).finally(() => {
@@ -113,6 +126,28 @@ export async function runLighthouseScan(url: string) {
     if (!result) throw new ScanError("SCAN_FAILED", "Lighthouse could not inspect this page.", 500);
 
     const lhr = result.lhr as unknown as LighthouseResult;
+    assertCompleteLighthouseResult(lhr, onlyCategories);
+    return lhr;
+  } finally {
+    try {
+      await chrome.kill();
+    } catch {
+      // Chrome can exit before chrome-launcher removes its temporary profile on Windows.
+    }
+  }
+}
+
+export async function runLighthouseScan(url: string) {
+  try {
+    // Keeping the DOM/SEO and performance work in separate browser processes avoids
+    // incomplete Lighthouse reports on memory- and CPU-constrained scanner hosts.
+    const contentResult = await runLighthousePass(url, ["accessibility", "seo"]);
+    const performanceResult = await runLighthousePass(url, ["performance"]);
+    const lhr: LighthouseResult = {
+      finalDisplayedUrl: performanceResult.finalDisplayedUrl || contentResult.finalDisplayedUrl,
+      audits: { ...contentResult.audits, ...performanceResult.audits },
+      categories: { ...contentResult.categories, ...performanceResult.categories },
+    };
     assertCompleteLighthouseResult(lhr);
     const issues: ScanIssueBase[] = [];
     const ruleIds = new Set<string>();
@@ -150,11 +185,5 @@ export async function runLighthouseScan(url: string) {
     const detail = error instanceof Error ? error.message : String(error);
     console.error(`[scanner] Lighthouse failed: ${detail}`);
     throw new ScanError("SCAN_FAILED", "The performance and SEO audit could not finish for this page.", 500);
-  } finally {
-    try {
-      await chrome.kill();
-    } catch {
-      // Chrome can exit before chrome-launcher removes its temporary profile on Windows.
-    }
   }
 }

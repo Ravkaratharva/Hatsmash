@@ -3,8 +3,8 @@ export const FREE_SCANS_PER_IP = Number(process.env.FREE_SCANS_PER_IP ?? 3);
 export const SCAN_JOB_TTL_SECONDS = Number(process.env.SCAN_JOB_TTL_SECONDS ?? 86_400);
 export const SCAN_WORKER_CONCURRENCY = Number(process.env.SCAN_WORKER_CONCURRENCY ?? 1);
 export const LIGHTHOUSE_TIMEOUT_MS = Math.min(
-  110_000,
-  Math.max(15_000, Number(process.env.LIGHTHOUSE_TIMEOUT_MS ?? 75_000)),
+  150_000,
+  Math.max(30_000, Number(process.env.LIGHTHOUSE_TIMEOUT_MS ?? 110_000)),
 );
 export const SCAN_PORT = Number(process.env.PORT ?? 8_788);
 
