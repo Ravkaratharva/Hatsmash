@@ -106,6 +106,15 @@ test("demo findings stop at submission and the live scan streams real findings",
   assert.match(scannerServerSource, /existingJob/);
 });
 
+test("the scanner keeps long Lighthouse jobs locked on small production hosts", async () => {
+  const queueSource = await readFile(new URL("../services/scanner/queue.ts", import.meta.url), "utf8");
+  const configSource = await readFile(new URL("../services/scanner/config.ts", import.meta.url), "utf8");
+
+  assert.match(queueSource, /lockDuration:\s*SCAN_WORKER_LOCK_DURATION_MS/);
+  assert.match(queueSource, /lockRenewTime:\s*60_000/);
+  assert.match(configSource, /SCAN_WORKER_LOCK_DURATION_MS/);
+});
+
 test("secondary routes render their own content and metadata", async () => {
   const routes = [
     ["/pricing", "Pricing — Hatsmash", "Free catches the issue"],

@@ -1,7 +1,13 @@
 import { Queue, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import type { ScanResult } from "../../lib/scan-schema.js";
-import { SCAN_JOB_TTL_SECONDS, SCAN_QUEUE_NAME, SCAN_WORKER_CONCURRENCY, requireRedisUrl } from "./config.js";
+import {
+  SCAN_JOB_TTL_SECONDS,
+  SCAN_QUEUE_NAME,
+  SCAN_WORKER_CONCURRENCY,
+  SCAN_WORKER_LOCK_DURATION_MS,
+  requireRedisUrl,
+} from "./config.js";
 import { encodeWorkerError } from "./errors.js";
 import { runScanPipeline, type ScanProgress } from "./pipeline.js";
 
@@ -36,7 +42,15 @@ export function createScanInfrastructure() {
         throw new Error(encodeWorkerError(error));
       }
     },
-    { connection: createRedisConnection(), concurrency: SCAN_WORKER_CONCURRENCY },
+    {
+      connection: createRedisConnection(),
+      concurrency: SCAN_WORKER_CONCURRENCY,
+      // Lighthouse can monopolize the tiny CPU allocation on a free Render instance.
+      // Keep the lock valid for the complete verified audit even if a renewal timer is delayed.
+      lockDuration: SCAN_WORKER_LOCK_DURATION_MS,
+      lockRenewTime: 60_000,
+      stalledInterval: 60_000,
+    },
   );
 
   return {
