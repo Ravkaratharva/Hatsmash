@@ -1,0 +1,1 @@
+CREATE INDEX "captured_emails_scan_id_idx" ON "captured_emails" USING btree ("scan_id");

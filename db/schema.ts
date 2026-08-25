@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import type { ScanResult } from "../lib/scan-schema.js";
 
 export const profiles = pgTable("profiles", {
@@ -21,10 +21,14 @@ export const scans = pgTable("scans", {
   scannedAt: timestamp("scanned_at", { withTimezone: true }).notNull(),
 }).enableRLS();
 
-export const capturedEmails = pgTable("captured_emails", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull(),
-  scanId: uuid("scan_id").notNull().references(() => scans.id),
-  source: text("source").notNull().default("fix-prompt-unlock"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-}).enableRLS();
+export const capturedEmails = pgTable(
+  "captured_emails",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    scanId: uuid("scan_id").notNull().references(() => scans.id),
+    source: text("source").notNull().default("fix-prompt-unlock"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("captured_emails_scan_id_idx").on(table.scanId)],
+).enableRLS();
