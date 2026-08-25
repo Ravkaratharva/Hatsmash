@@ -3,12 +3,15 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
   issueCategories,
+  targetTools,
   type IssueCategory,
+  type ScanIssue,
   type ScanIssueBase,
   type ScanJobAccepted,
   type ScanJobStatus,
   type ScanResult,
   type ScanStage,
+  type TargetTool,
 } from "@/lib/scan-schema";
 import { SiteNav } from "../_components/SiteNav";
 
@@ -171,8 +174,12 @@ export default function Home() {
   const [error, setError] = useState("");
   const [scan, setScan] = useState<ScanResult | null>(null);
   const [liveFindings, setLiveFindings] = useState<ScanIssueBase[]>([]);
+  const [completedFindings, setCompletedFindings] = useState<ScanIssue[] | null>(null);
   const [demoVisibleCount, setDemoVisibleCount] = useState(3);
   const [activeCategory, setActiveCategory] = useState<IssueCategory | null>(null);
+  const [selectedTool, setSelectedTool] = useState<TargetTool>(targetTools[0]);
+  const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
+  const [copyFeedback, setCopyFeedback] = useState<{ findingId: string; mode: "copied" | "selected" } | null>(null);
 
   useEffect(() => {
     if (state !== "idle") return;
@@ -198,7 +205,7 @@ export default function Home() {
   const sourceFindings: ScanIssueBase[] = state === "idle"
     ? demoFindings.slice(0, demoVisibleCount)
     : state === "complete"
-      ? scan?.findings ?? []
+      ? completedFindings ?? []
       : state === "scanning"
         ? liveFindings
         : [];
@@ -221,7 +228,10 @@ export default function Home() {
     setError("");
     setScan(null);
     setLiveFindings([]);
+    setCompletedFindings(null);
     setActiveCategory(null);
+    setExpandedFindings(new Set());
+    setCopyFeedback(null);
 
     if (!url.trim()) {
       setState("error");
@@ -284,7 +294,7 @@ export default function Home() {
         if (current.stage === "done") {
           setStatusText(current.statusText);
           setScan(current.result);
-          setLiveFindings(current.result.findings);
+          setCompletedFindings(current.result.findings);
           setState("complete");
           return;
         }
@@ -298,6 +308,40 @@ export default function Home() {
       setState("error");
       setError(scanError instanceof Error ? scanError.message : "The scan failed before it could finish. Please try again.");
     }
+  }
+
+  function toggleFinding(findingId: string) {
+    if (state !== "complete") return;
+    setExpandedFindings((current) => {
+      const next = new Set(current);
+      if (next.has(findingId)) next.delete(findingId);
+      else next.add(findingId);
+      return next;
+    });
+  }
+
+  async function copyPrompt(finding: ScanIssue) {
+    const prompt = finding.fixPrompts.find((fixPrompt) => fixPrompt.tool === selectedTool)?.prompt;
+    if (!prompt) return;
+
+    let mode: "copied" | "selected" = "copied";
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+      await navigator.clipboard.writeText(prompt);
+    } catch {
+      mode = "selected";
+      const selection = window.getSelection();
+      const promptElement = document.getElementById(`prompt-${finding.id}`);
+      if (selection && promptElement) {
+        const range = document.createRange();
+        range.selectNodeContents(promptElement);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+
+    setCopyFeedback({ findingId: finding.id, mode });
+    window.setTimeout(() => setCopyFeedback((current) => current?.findingId === finding.id ? null : current), 2_000);
   }
 
   return (
@@ -381,6 +425,24 @@ export default function Home() {
                   <b>{filteredFindings.length}<small>{filteredFindings.length === 1 ? " issue" : " issues"}</small></b>
                 </div>
                 {scan && <div className="analysis-score"><strong>{scan.score}</strong><span>/100<br />Hatsmash score</span></div>}
+                {state === "complete" && (
+                  <div className="tool-selector" aria-label="Choose a tool for the fix prompts">
+                    <span>Fix prompts for</span>
+                    <div role="group" aria-label="Target AI tool">
+                      {targetTools.map((tool) => (
+                        <button
+                          type="button"
+                          className={selectedTool === tool ? "is-active" : ""}
+                          aria-pressed={selectedTool === tool}
+                          key={tool}
+                          onClick={() => setSelectedTool(tool)}
+                        >
+                          {tool}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="severity-counts" aria-label="Finding severity counts">
                   <span className="critical"><i />{severityCounts.critical}<small>critical</small></span>
                   <span className="warning"><i />{severityCounts.warning}<small>warning</small></span>
@@ -415,13 +477,66 @@ export default function Home() {
               {state !== "error" && visibleFindings.length > 0 && (
                 <div className="finding-list">
                   {visibleFindings.map((finding) => (
-                    <div className="finding" key={finding.id}>
-                      <div className="finding-meta">
-                        <b className={`finding-category ${finding.severity}`}>{categoryLabels[finding.category].badge}</b>
-                        <span className={`severity-label ${finding.severity}`}><i />{finding.severity}</span>
-                      </div>
-                      <strong>{finding.message}</strong>
-                      {finding.location && <small>{finding.location}</small>}
+                    <div
+                      className={`finding ${state === "complete" ? "is-expandable" : ""} ${expandedFindings.has(finding.id) ? "is-expanded" : ""}`}
+                      key={finding.id}
+                    >
+                      {state === "complete" ? (
+                        <button
+                          type="button"
+                          className="finding-toggle"
+                          aria-expanded={expandedFindings.has(finding.id)}
+                          aria-controls={`finding-details-${finding.id}`}
+                          onClick={() => toggleFinding(finding.id)}
+                        >
+                          <span className="finding-meta">
+                            <b className={`finding-category ${finding.severity}`}>{categoryLabels[finding.category].badge}</b>
+                            <span className={`severity-label ${finding.severity}`}><i />{finding.severity}<span className="finding-chevron" aria-hidden="true">⌄</span></span>
+                          </span>
+                          <strong>{finding.message}</strong>
+                          {finding.location && <small>{finding.location}</small>}
+                        </button>
+                      ) : (
+                        <>
+                          <div className="finding-meta">
+                            <b className={`finding-category ${finding.severity}`}>{categoryLabels[finding.category].badge}</b>
+                            <span className={`severity-label ${finding.severity}`}><i />{finding.severity}</span>
+                          </div>
+                          <strong>{finding.message}</strong>
+                          {finding.location && <small>{finding.location}</small>}
+                        </>
+                      )}
+                      {state === "complete" && (() => {
+                        const completedFinding = completedFindings?.find((item) => item.id === finding.id);
+                        if (!completedFinding) return null;
+                        const prompt = completedFinding.fixPrompts.find((fixPrompt) => fixPrompt.tool === selectedTool)?.prompt;
+                        return (
+                          <div className="finding-details" id={`finding-details-${finding.id}`} aria-hidden={!expandedFindings.has(finding.id)}>
+                            <div className="finding-details-inner">
+                              <p className="finding-fix-description">
+                                <span>Recommended fix</span>
+                                {completedFinding.fixDescription}
+                              </p>
+                              <div className="prompt-block">
+                                <div className="prompt-heading">
+                                  <span>{selectedTool} prompt</span>
+                                  <button
+                                    type="button"
+                                    aria-live="polite"
+                                    tabIndex={expandedFindings.has(finding.id) ? 0 : -1}
+                                    onClick={() => void copyPrompt(completedFinding)}
+                                  >
+                                    {copyFeedback?.findingId === finding.id
+                                      ? copyFeedback.mode === "copied" ? "Copied" : "Text selected"
+                                      : "Copy prompt"}
+                                  </button>
+                                </div>
+                                <p id={`prompt-${finding.id}`}>{prompt ?? "A fix prompt is not available for this tool."}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ))}
                 </div>

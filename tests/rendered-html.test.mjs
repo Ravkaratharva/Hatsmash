@@ -106,6 +106,23 @@ test("demo findings stop at submission and the live scan streams real findings",
   assert.match(scannerServerSource, /existingJob/);
 });
 
+test("completed findings expose one global fix-prompt tool and expandable copy controls", async () => {
+  const pageSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(pageSource, /useState<ScanIssue\[\] \| null>\(null\)/);
+  assert.match(pageSource, /setCompletedFindings\(current\.result\.findings\)/);
+  assert.doesNotMatch(pageSource, /setLiveFindings\(current\.result\.findings\)/);
+  assert.match(pageSource, /state === "complete"[\s\S]*completedFindings \?\? \[\]/);
+  assert.match(pageSource, /targetTools\.map\(\(tool\)/);
+  assert.match(pageSource, /aria-pressed=\{selectedTool === tool\}/);
+  assert.match(pageSource, /aria-expanded=\{expandedFindings\.has\(finding\.id\)\}/);
+  assert.match(pageSource, /completedFinding\.fixDescription/);
+  assert.match(pageSource, /fixPrompt\.tool === selectedTool/);
+  assert.match(pageSource, /navigator\.clipboard\?\.writeText/);
+  assert.match(pageSource, /range\.selectNodeContents\(promptElement\)/);
+  assert.match(pageSource, /2_000/);
+});
+
 test("the scanner keeps long Lighthouse jobs locked on small production hosts", async () => {
   const queueSource = await readFile(new URL("../services/scanner/queue.ts", import.meta.url), "utf8");
   const configSource = await readFile(new URL("../services/scanner/config.ts", import.meta.url), "utf8");
