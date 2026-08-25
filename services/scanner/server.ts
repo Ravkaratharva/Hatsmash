@@ -61,7 +61,7 @@ app.post("/api/scan", async (request, reply) => {
       });
     }
     const quota = await consumeFreeScan(infrastructure.quotaConnection, request.ip);
-    await infrastructure.queue.add("scan", { url, remainingFreeScans: quota.remaining }, { jobId });
+    await infrastructure.queue.add("scan", { url, remainingFreeScans: quota.remaining, ipHash: quota.ipHash }, { jobId });
     return reply.code(202).send({ jobId, stage: "queued", remainingFreeScans: quota.remaining });
   } catch (error) {
     const publicError = toPublicScanError(error);

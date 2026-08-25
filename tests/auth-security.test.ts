@@ -61,3 +61,11 @@ test("client bundles contain no server credentials or session secrets", async ()
   assert.doesNotMatch(contents, /sb_secret_|service[_-]?role|SUPABASE_SERVICE_ROLE|AUTH_RATE_LIMIT_SALT|SUPABASE_PUBLISHABLE_KEY|SUPABASE_URL/i);
   assert.doesNotMatch(contents, /rediss:\/\/default:/i);
 });
+
+test("Cloudflare frontend code never imports the TCP Postgres connection", async () => {
+  const files = (await allFiles(path.resolve("app"))).filter((file) => /\.(?:ts|tsx)$/i.test(file));
+  const contents = (await Promise.all(files.map((file) => readFile(file, "utf8")))).join("\n");
+
+  assert.doesNotMatch(contents, /drizzle-orm\/postgres-js|from ["']postgres["']|DATABASE_URL|db\/schema/i);
+  assert.doesNotMatch(contents, /SUPABASE_SERVICE_ROLE_KEY|VITE_SUPABASE_SERVICE_ROLE/i);
+});

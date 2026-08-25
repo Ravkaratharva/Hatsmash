@@ -14,6 +14,6 @@
     "sourceMap": false,
     "noEmit": false
   },
-  "include": ["lib/scan-schema.ts", "services/scanner/**/*.ts"],
+  "include": ["db/schema.ts", "lib/scan-schema.ts", "services/scanner/**/*.ts"],
   "exclude": ["node_modules", "dist", ".next", ".vinext"]
 }

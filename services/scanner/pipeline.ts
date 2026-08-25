@@ -7,6 +7,7 @@ import {
   type ScanStage,
 } from "../../lib/scan-schema.js";
 import { runAxeScan } from "./axe-scan.js";
+import { persistCompletedScan } from "./database.js";
 import { generateFixPrompts } from "./fix-prompts.js";
 import { runAiTellHeuristics } from "./heuristics/index.js";
 import { dedupeIssues } from "./issues.js";
@@ -29,7 +30,11 @@ function issueScore(issues: ScanIssueBase[], category: IssueCategory) {
     .reduce((total, issue) => total + deductions[issue.severity], 0));
 }
 
-export async function runScanPipeline(inputUrl: string, reportProgress: ProgressReporter = () => undefined): Promise<ScanResult> {
+export async function runScanPipeline(
+  inputUrl: string,
+  reportProgress: ProgressReporter = () => undefined,
+  ipHash?: string,
+): Promise<ScanResult> {
   await reportProgress({ stage: "rendering", statusText: "Rendering page…" });
   const rendered = await renderPage(inputUrl);
   let renderedClosed = false;
@@ -84,13 +89,15 @@ export async function runScanPipeline(inputUrl: string, reportProgress: Progress
     };
     const score = Math.round(Object.values(scores).reduce((total, value) => total + value, 0) / 5);
 
-    return scanResultSchema.parse({
+    const result = scanResultSchema.parse({
       url: rendered.finalUrl,
       score,
       scores,
       scannedAt: new Date().toISOString(),
       findings,
     });
+    void persistCompletedScan(result, ipHash);
+    return result;
   } finally {
     if (!renderedClosed) await rendered.close();
   }

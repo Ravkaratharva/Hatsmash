@@ -1,6 +1,7 @@
 import { Queue, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import type { ScanResult } from "../../lib/scan-schema.js";
+import { closeScannerDatabase } from "./database.js";
 import {
   SCAN_JOB_TTL_SECONDS,
   SCAN_QUEUE_NAME,
@@ -11,7 +12,7 @@ import {
 import { encodeWorkerError } from "./errors.js";
 import { runScanPipeline, type ScanProgress } from "./pipeline.js";
 
-export type ScanJobData = { url: string; remainingFreeScans: number };
+export type ScanJobData = { url: string; remainingFreeScans: number; ipHash?: string };
 
 function createRedisConnection() {
   return new Redis(requireRedisUrl(), {
@@ -37,7 +38,11 @@ export function createScanInfrastructure() {
     SCAN_QUEUE_NAME,
     async (job: Job<ScanJobData, ScanResult>) => {
       try {
-        return await runScanPipeline(job.data.url, (progress: ScanProgress) => job.updateProgress(progress));
+        return await runScanPipeline(
+          job.data.url,
+          (progress: ScanProgress) => job.updateProgress(progress),
+          job.data.ipHash,
+        );
       } catch (error) {
         throw new Error(encodeWorkerError(error));
       }
@@ -62,6 +67,7 @@ export function createScanInfrastructure() {
       await queue.close();
       await quotaConnection.quit();
       await queueConnection.quit();
+      await closeScannerDatabase();
     },
   };
 }
