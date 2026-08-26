@@ -735,6 +735,22 @@ html[data-theme="light"] .theme-toggle-icon i { inset: 3px; transform: none; }
 .prompt-heading button:hover { color: #11191e; background: var(--caution-amber); }
 .prompt-heading button:focus-visible { outline: 2px solid var(--caution-amber); outline-offset: -3px; }
 .prompt-block > p { max-height: 210px; margin: 0; padding: 13px; overflow: auto; color: #c3cdd1; font: 500 .57rem/1.65 var(--font-evidence); white-space: pre-wrap; user-select: text; }
+.unlock-gate { margin: 0 15px 15px; padding: 18px; color: #dce4e7; background: #0e161b; border: 1px solid #3b4b53; border-radius: 5px; }
+.unlock-gate-kicker { display: block; color: var(--caution-amber); font: 700 .48rem/1 var(--font-evidence); letter-spacing: .09em; text-transform: uppercase; }
+.unlock-gate > strong { display: block; margin-top: 9px; color: white; font-size: .9rem; }
+.unlock-gate > p { margin: 7px 0 15px; color: #9cabb1; font-size: .67rem; line-height: 1.5; }
+.unlock-gate > label { display: block; margin-bottom: 7px; color: #c4cfd3; font: 600 .48rem/1 var(--font-evidence); letter-spacing: .07em; text-transform: uppercase; }
+.unlock-email-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 1px solid #43545d; border-radius: 4px; overflow: hidden; }
+.unlock-email-row:focus-within { border-color: var(--caution-amber); box-shadow: 0 0 0 2px rgba(244, 188, 67, .13); }
+.unlock-email-row.has-error { border-color: var(--finding-red); box-shadow: 0 0 0 2px rgba(255, 88, 72, .12); }
+.unlock-email-row input { min-width: 0; min-height: 44px; padding: 0 12px; color: white; background: #151f25; border: 0; outline: 0; font: 500 .66rem var(--font-evidence); }
+.unlock-email-row input::placeholder { color: #6f7e85; }
+.unlock-email-row button { min-height: 44px; padding: 0 14px; display: flex; align-items: center; gap: 18px; color: #11191e; background: var(--caution-amber); border: 0; font-size: .65rem; font-weight: 700; cursor: pointer; }
+.unlock-email-row button:hover { background: #ffd06a; }
+.unlock-email-row button:focus-visible { outline: 2px solid white; outline-offset: -4px; }
+.unlock-email-row button:disabled { cursor: wait; opacity: .7; }
+.unlock-gate > small { display: block; margin-top: 8px; color: var(--finding-red); font: 600 .52rem/1.4 var(--font-evidence); }
+.unlock-gate > em { display: block; margin-top: 10px; color: #74838a; font: 500 .48rem/1.4 var(--font-evidence); font-style: normal; }
 .audit-results .finding-meta { margin-bottom: 10px; }
 .audit-results .finding-category { padding: 4px 6px; font-size: .49rem; }
 .audit-results .severity-label { font-size: .47rem; }
@@ -801,6 +817,8 @@ html[data-theme="light"] .github-pro-card > a { color: var(--audit-ink); backgro
   .tool-selector { grid-template-columns: 1fr; }
   .tool-selector > div { padding-bottom: 4px; overflow-x: auto; }
   .tool-selector button { flex: 0 0 auto; }
+  .unlock-email-row { grid-template-columns: 1fr; }
+  .unlock-email-row button { justify-content: space-between; }
   .analysis-score { order: 3; width: 100%; margin: 5px 0 0; }
   .audit-results .severity-counts { margin-left: auto; }
   .audit-results .severity-counts > span { min-width: 50px; padding: 7px 6px; }

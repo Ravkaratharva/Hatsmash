@@ -42,6 +42,7 @@ export function createScanInfrastructure() {
           job.data.url,
           (progress: ScanProgress) => job.updateProgress(progress),
           job.data.ipHash,
+          job.id,
         );
       } catch (error) {
         throw new Error(encodeWorkerError(error));

@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   issueCategories,
   targetTools,
+  unlockEmailSchema,
   type IssueCategory,
   type ScanIssue,
   type ScanIssueBase,
@@ -16,6 +17,17 @@ import {
 import { SiteNav } from "../_components/SiteNav";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
+
+const UNLOCK_EMAIL_STORAGE_KEY = "hatsmash_unlock_email";
+
+function storedUnlockEmail() {
+  if (typeof window === "undefined") return null;
+  const storedEmail = window.localStorage.getItem(UNLOCK_EMAIL_STORAGE_KEY);
+  const parsedEmail = unlockEmailSchema.safeParse(storedEmail);
+  if (parsedEmail.success) return parsedEmail.data;
+  if (storedEmail) window.localStorage.removeItem(UNLOCK_EMAIL_STORAGE_KEY);
+  return null;
+}
 
 const scanSteps: Array<{ stage: Exclude<ScanStage, "done" | "failed">; label: string }> = [
   { stage: "queued", label: "Waiting for an available scanner" },
@@ -148,6 +160,28 @@ async function readJsonResponse(response: Response) {
   }
 }
 
+async function submitUnlockRequest(email: string, scanId: string) {
+  try {
+    const response = await fetch("/api/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, scanId }),
+    });
+    const payload = await readJsonResponse(response);
+    if (response.status === 400) {
+      return {
+        invalid: true,
+        message: errorMessage(payload, "Enter a valid email address and try again."),
+      };
+    }
+  } catch {
+    // A valid email still unlocks prompts when persistence is temporarily
+    // unavailable. The scanner stores captures on a best-effort basis.
+  }
+
+  return { invalid: false, message: "" };
+}
+
 function isTransientScannerFailure(response: Response, payload: unknown) {
   return response.status === 502
     || response.status === 503
@@ -173,6 +207,7 @@ export default function Home() {
   const [statusText, setStatusText] = useState("Waiting for an available scanner…");
   const [error, setError] = useState("");
   const [scan, setScan] = useState<ScanResult | null>(null);
+  const [scanId, setScanId] = useState<string | null>(null);
   const [liveFindings, setLiveFindings] = useState<ScanIssueBase[]>([]);
   const [completedFindings, setCompletedFindings] = useState<ScanIssue[] | null>(null);
   const [demoVisibleCount, setDemoVisibleCount] = useState(3);
@@ -180,6 +215,17 @@ export default function Home() {
   const [selectedTool, setSelectedTool] = useState<TargetTool>(targetTools[0]);
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
   const [copyFeedback, setCopyFeedback] = useState<{ findingId: string; mode: "copied" | "selected" } | null>(null);
+  const [unlockEmail, setUnlockEmail] = useState<string | null>(() => storedUnlockEmail());
+  const [unlockEmailInput, setUnlockEmailInput] = useState(() => storedUnlockEmail() ?? "");
+  const [unlockError, setUnlockError] = useState("");
+  const [unlockSubmitting, setUnlockSubmitting] = useState(false);
+  const reportedScanIds = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (state !== "complete" || !scanId || !unlockEmail || reportedScanIds.current.has(scanId)) return;
+    reportedScanIds.current.add(scanId);
+    void submitUnlockRequest(unlockEmail, scanId);
+  }, [scanId, state, unlockEmail]);
 
   useEffect(() => {
     if (state !== "idle") return;
@@ -227,6 +273,7 @@ export default function Home() {
     event.preventDefault();
     setError("");
     setScan(null);
+    setScanId(null);
     setLiveFindings([]);
     setCompletedFindings(null);
     setActiveCategory(null);
@@ -294,6 +341,7 @@ export default function Home() {
         if (current.stage === "done") {
           setStatusText(current.statusText);
           setScan(current.result);
+          setScanId(current.scanId);
           setCompletedFindings(current.result.findings);
           setState("complete");
           return;
@@ -342,6 +390,34 @@ export default function Home() {
 
     setCopyFeedback({ findingId: finding.id, mode });
     window.setTimeout(() => setCopyFeedback((current) => current?.findingId === finding.id ? null : current), 2_000);
+  }
+
+  async function unlockFixPrompts(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setUnlockError("");
+
+    const parsedEmail = unlockEmailSchema.safeParse(unlockEmailInput);
+    if (!parsedEmail.success) {
+      setUnlockError("Enter a valid email address, such as you@example.com.");
+      return;
+    }
+    if (!scanId) {
+      setUnlockError("This scan is still finishing. Please try again in a moment.");
+      return;
+    }
+
+    setUnlockSubmitting(true);
+    const result = await submitUnlockRequest(parsedEmail.data, scanId);
+    setUnlockSubmitting(false);
+    if (result.invalid) {
+      setUnlockError(result.message);
+      return;
+    }
+
+    reportedScanIds.current.add(scanId);
+    window.localStorage.setItem(UNLOCK_EMAIL_STORAGE_KEY, parsedEmail.data);
+    setUnlockEmail(parsedEmail.data);
+    setUnlockEmailInput(parsedEmail.data);
   }
 
   return (
@@ -513,26 +589,64 @@ export default function Home() {
                         return (
                           <div className="finding-details" id={`finding-details-${finding.id}`} aria-hidden={!expandedFindings.has(finding.id)}>
                             <div className="finding-details-inner">
-                              <p className="finding-fix-description">
-                                <span>Recommended fix</span>
-                                {completedFinding.fixDescription}
-                              </p>
-                              <div className="prompt-block">
-                                <div className="prompt-heading">
-                                  <span>{selectedTool} prompt</span>
-                                  <button
-                                    type="button"
-                                    aria-live="polite"
-                                    tabIndex={expandedFindings.has(finding.id) ? 0 : -1}
-                                    onClick={() => void copyPrompt(completedFinding)}
-                                  >
-                                    {copyFeedback?.findingId === finding.id
-                                      ? copyFeedback.mode === "copied" ? "Copied" : "Text selected"
-                                      : "Copy prompt"}
-                                  </button>
-                                </div>
-                                <p id={`prompt-${finding.id}`}>{prompt ?? "A fix prompt is not available for this tool."}</p>
-                              </div>
+                              {unlockEmail ? (
+                                <>
+                                  <p className="finding-fix-description">
+                                    <span>Recommended fix</span>
+                                    {completedFinding.fixDescription}
+                                  </p>
+                                  <div className="prompt-block">
+                                    <div className="prompt-heading">
+                                      <span>{selectedTool} prompt</span>
+                                      <button
+                                        type="button"
+                                        aria-live="polite"
+                                        tabIndex={expandedFindings.has(finding.id) ? 0 : -1}
+                                        onClick={() => void copyPrompt(completedFinding)}
+                                      >
+                                        {copyFeedback?.findingId === finding.id
+                                          ? copyFeedback.mode === "copied" ? "Copied" : "Text selected"
+                                          : "Copy prompt"}
+                                      </button>
+                                    </div>
+                                    <p id={`prompt-${finding.id}`}>{prompt ?? "A fix prompt is not available for this tool."}</p>
+                                  </div>
+                                </>
+                              ) : (
+                                <form className="unlock-gate" onSubmit={unlockFixPrompts} noValidate>
+                                  <span className="unlock-gate-kicker">Fix prompts locked</span>
+                                  <strong>Unlock every fix-prompt</strong>
+                                  <p>Enter your email to unlock every fix-prompt for this scan.</p>
+                                  <label htmlFor={`unlock-email-${finding.id}`}>Email address</label>
+                                  <div className={`unlock-email-row ${unlockError ? "has-error" : ""}`}>
+                                    <input
+                                      id={`unlock-email-${finding.id}`}
+                                      type="email"
+                                      inputMode="email"
+                                      autoComplete="email"
+                                      placeholder="you@example.com"
+                                      value={unlockEmailInput}
+                                      tabIndex={expandedFindings.has(finding.id) ? 0 : -1}
+                                      aria-invalid={Boolean(unlockError)}
+                                      aria-describedby={unlockError ? `unlock-error-${finding.id}` : undefined}
+                                      onChange={(event) => {
+                                        setUnlockEmailInput(event.target.value);
+                                        if (unlockError) setUnlockError("");
+                                      }}
+                                    />
+                                    <button
+                                      type="submit"
+                                      disabled={unlockSubmitting}
+                                      tabIndex={expandedFindings.has(finding.id) ? 0 : -1}
+                                    >
+                                      {unlockSubmitting ? "Unlocking…" : "Unlock prompts"}
+                                      <span aria-hidden="true">→</span>
+                                    </button>
+                                  </div>
+                                  {unlockError && <small id={`unlock-error-${finding.id}`} role="alert">{unlockError}</small>}
+                                  <em>One unlock covers this scan and future scans in this browser.</em>
+                                </form>
+                              )}
                             </div>
                           </div>
                         );

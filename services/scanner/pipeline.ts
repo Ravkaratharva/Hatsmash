@@ -34,6 +34,7 @@ export async function runScanPipeline(
   inputUrl: string,
   reportProgress: ProgressReporter = () => undefined,
   ipHash?: string,
+  scanId?: string,
 ): Promise<ScanResult> {
   await reportProgress({ stage: "rendering", statusText: "Rendering page…" });
   const rendered = await renderPage(inputUrl);
@@ -96,7 +97,7 @@ export async function runScanPipeline(
       scannedAt: new Date().toISOString(),
       findings,
     });
-    void persistCompletedScan(result, ipHash);
+    void persistCompletedScan(result, ipHash, scanId);
     return result;
   } finally {
     if (!renderedClosed) await rendered.close();

@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { scans } from "../../db/schema.js";
+import { capturedEmails, scans } from "../../db/schema.js";
 import type { ScanResult } from "../../lib/scan-schema.js";
 
 let sqlClient: ReturnType<typeof postgres> | undefined;
@@ -32,12 +32,13 @@ function scannerDatabase() {
   return database;
 }
 
-export async function persistCompletedScan(result: ScanResult, ipHash?: string) {
+export async function persistCompletedScan(result: ScanResult, ipHash?: string, scanId?: string) {
   try {
     const db = scannerDatabase();
     if (!db) return;
 
     await db.insert(scans).values({
+      id: scanId,
       url: result.url,
       score: result.score,
       scores: result.scores,
@@ -50,6 +51,33 @@ export async function persistCompletedScan(result: ScanResult, ipHash?: string) 
     // prevent the user from receiving an otherwise successful scan result.
     console.error("Failed to persist completed Hatsmash scan:", error instanceof Error ? error.message : error);
   }
+}
+
+export async function persistCapturedEmail(email: string, scanId: string) {
+  const db = scannerDatabase();
+  if (!db) return;
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await db.insert(capturedEmails).values({
+        email,
+        scanId,
+        source: "fix-prompt-unlock",
+        createdAt: new Date(),
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      // A completed job becomes visible just before its fire-and-forget scan
+      // row write may finish. Brief retries keep the scan foreign key reliable.
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+    }
+  }
+
+  // Email capture is best-effort. A storage outage must not keep a visitor
+  // from using fix prompts after they submitted a valid email address.
+  console.error("Failed to persist Hatsmash unlock email:", lastError instanceof Error ? lastError.message : lastError);
 }
 
 export async function closeScannerDatabase() {

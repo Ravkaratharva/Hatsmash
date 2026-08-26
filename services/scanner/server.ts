@@ -2,8 +2,9 @@ import cors from "@fastify/cors";
 import Fastify from "fastify";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { scanResultSchema } from "../../lib/scan-schema.js";
+import { scanResultSchema, unlockRequestSchema } from "../../lib/scan-schema.js";
 import { SCAN_PORT } from "./config.js";
+import { persistCapturedEmail } from "./database.js";
 import { decodeWorkerError, toPublicScanError } from "./errors.js";
 import type { ScanProgress } from "./pipeline.js";
 import { createScanInfrastructure } from "./queue.js";
@@ -75,6 +76,21 @@ app.post("/api/scan", async (request, reply) => {
   }
 });
 
+app.post("/api/unlock", async (request, reply) => {
+  const parsed = unlockRequestSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.code(400).send({
+      error: {
+        code: "INVALID_UNLOCK_REQUEST",
+        message: "Enter a valid email address and try again.",
+      },
+    });
+  }
+
+  void persistCapturedEmail(parsed.data.email, parsed.data.scanId);
+  return reply.send({ ok: true });
+});
+
 app.get<{ Params: { jobId: string } }>("/api/scan-status/:jobId", async (request, reply) => {
   const job = await infrastructure.queue.getJob(request.params.jobId);
   if (!job) return reply.code(404).send({ error: { code: "JOB_NOT_FOUND", message: "That scan has expired or does not exist." } });
@@ -86,6 +102,7 @@ app.get<{ Params: { jobId: string } }>("/api/scan-status/:jobId", async (request
     if (parsedResult.success) {
       return {
         jobId: job.id,
+        scanId: String(job.id),
         stage: "done",
         statusText: "Audit complete.",
         result: parsedResult.data,

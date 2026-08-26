@@ -75,6 +75,7 @@ export const scanJobStatusSchema = z.discriminatedUnion("stage", [
   }),
   z.object({
     jobId: z.string(),
+    scanId: z.uuid(),
     stage: z.literal("done"),
     statusText: z.string(),
     result: scanResultSchema,
@@ -87,6 +88,18 @@ export const scanJobStatusSchema = z.discriminatedUnion("stage", [
   }),
 ]);
 
+export const unlockEmailSchema = z
+  .string()
+  .trim()
+  .max(254)
+  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/, "Enter a valid email address.")
+  .transform((email) => email.toLowerCase());
+
+export const unlockRequestSchema = z.object({
+  email: unlockEmailSchema,
+  scanId: z.uuid(),
+});
+
 export type IssueCategory = z.infer<typeof issueCategorySchema>;
 export type IssueSeverity = z.infer<typeof issueSeveritySchema>;
 export type TargetTool = z.infer<typeof targetToolSchema>;
@@ -96,3 +109,4 @@ export type ScanIssue = z.infer<typeof scanIssueSchema>;
 export type ScanResult = z.infer<typeof scanResultSchema>;
 export type ScanJobAccepted = z.infer<typeof scanJobAcceptedSchema>;
 export type ScanJobStatus = z.infer<typeof scanJobStatusSchema>;
+export type UnlockRequest = z.infer<typeof unlockRequestSchema>;

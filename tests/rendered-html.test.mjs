@@ -123,6 +123,25 @@ test("completed findings expose one global fix-prompt tool and expandable copy c
   assert.match(pageSource, /2_000/);
 });
 
+test("one valid email unlocks prompts for the scan and future scans in the browser", async () => {
+  const pageSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  const unlockRouteSource = await readFile(new URL("../app/api/unlock/route.ts", import.meta.url), "utf8");
+  const scannerServerSource = await readFile(new URL("../services/scanner/server.ts", import.meta.url), "utf8");
+  const databaseSource = await readFile(new URL("../services/scanner/database.ts", import.meta.url), "utf8");
+
+  assert.match(pageSource, /hatsmash_unlock_email/);
+  assert.match(pageSource, /window\.localStorage\.setItem/);
+  assert.match(pageSource, /Enter your email to unlock every fix-prompt for this scan\./);
+  assert.match(pageSource, /unlockEmail \? \(/);
+  assert.match(pageSource, /state !== "complete" \|\| !scanId \|\| !unlockEmail/);
+  assert.match(unlockRouteSource, /forwardScannerRequest\(request, "\/api\/unlock", "POST"\)/);
+  assert.doesNotMatch(unlockRouteSource, /drizzle|DATABASE_URL|capturedEmails/);
+  assert.match(scannerServerSource, /app\.post\("\/api\/unlock"/);
+  assert.match(scannerServerSource, /unlockRequestSchema\.safeParse/);
+  assert.match(databaseSource, /db\.insert\(capturedEmails\)/);
+  assert.match(databaseSource, /source: "fix-prompt-unlock"/);
+});
+
 test("the scanner keeps long Lighthouse jobs locked on small production hosts", async () => {
   const queueSource = await readFile(new URL("../services/scanner/queue.ts", import.meta.url), "utf8");
   const configSource = await readFile(new URL("../services/scanner/config.ts", import.meta.url), "utf8");
