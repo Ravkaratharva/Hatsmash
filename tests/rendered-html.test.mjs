@@ -23,9 +23,9 @@ async function htmlFor(path) {
 
 test("all internal landing navigation stays in the current tab", async () => {
   const html = await htmlFor("/");
-  assert.match(html, /<title>Hatsmash — Find what your AI builder missed<\/title>/i);
-  assert.match(html, /Your site looks done/);
-  assert.match(html, /href="\/app"[^>]*>Smash It/i);
+  assert.match(html, /<title>Hatsmash — Build a safer, better website<\/title>/i);
+  assert.match(html, /Get started with/);
+  assert.match(html, /href="\/app"[^>]*>Start audit/i);
   for (const route of ["pricing", "community", "login", "signup", "app"]) {
     const link = html.match(new RegExp(`<a[^>]*href="/${route}"[^>]*>`, "i"));
     assert.ok(link, `/${route} link should exist`);
@@ -57,11 +57,11 @@ test("scan experience remains available at /app", async () => {
   assert.match(html, /Paste your URL/);
   assert.match(html, /Scan website/);
   assert.match(html, /Three free scans per day\./);
-  assert.match(html, /Connect GitHub/);
-  assert.match(html, /Unlock GitHub connection/);
+  assert.match(html, /Connect repository/);
+  assert.match(html, /Explore Pro/);
   assert.match(html, /href="\/pricing"/);
   assert.match(html, /href="\/community"[^>]*>Community/i);
-  assert.match(html, /href="\/app"[^>]*>Smash It/i);
+  assert.match(html, /href="\/app"[^>]*>Start audit/i);
   assert.doesNotMatch(html, /Back to site/i);
   assert.match(html, /Switch to light mode/);
   assert.match(html, /DEMO FINDINGS/);
@@ -79,7 +79,7 @@ test("demo findings stop at submission and the live scan streams real findings",
   const schemaSource = await readFile(new URL("../lib/scan-schema.ts", import.meta.url), "utf8");
   const pipelineSource = await readFile(new URL("../services/scanner/pipeline.ts", import.meta.url), "utf8");
   assert.match(pageSource, /api\/scan-status/);
-  assert.match(pageSource, /Generating tool-specific fix prompts/);
+  assert.match(pageSource, /Preparing repair instructions/);
   assert.match(pageSource, /state === "idle"[\s\S]*demoFindings\.slice/);
   assert.match(pageSource, /current\.liveFindings/);
   assert.match(pageSource, /readJsonResponse/);
@@ -106,18 +106,17 @@ test("demo findings stop at submission and the live scan streams real findings",
   assert.match(scannerServerSource, /existingJob/);
 });
 
-test("completed findings expose one global fix-prompt tool and expandable copy controls", async () => {
+test("completed findings expose repair prompts and expandable copy controls", async () => {
   const pageSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
 
   assert.match(pageSource, /useState<ScanIssue\[\] \| null>\(null\)/);
   assert.match(pageSource, /setCompletedFindings\(current\.result\.findings\)/);
   assert.doesNotMatch(pageSource, /setLiveFindings\(current\.result\.findings\)/);
   assert.match(pageSource, /state === "complete"[\s\S]*completedFindings \?\? \[\]/);
-  assert.match(pageSource, /targetTools\.map\(\(tool\)/);
-  assert.match(pageSource, /aria-pressed=\{selectedTool === tool\}/);
+  assert.doesNotMatch(pageSource, /targetTools\.map/);
   assert.match(pageSource, /aria-expanded=\{expandedFindings\.has\(finding\.id\)\}/);
   assert.match(pageSource, /completedFinding\.fixDescription/);
-  assert.match(pageSource, /fixPrompt\.tool === selectedTool/);
+  assert.match(pageSource, /repairPrompt\(completedFinding\)/);
   assert.match(pageSource, /navigator\.clipboard\?\.writeText/);
   assert.match(pageSource, /range\.selectNodeContents\(promptElement\)/);
   assert.match(pageSource, /2_000/);
@@ -154,8 +153,8 @@ test("the scanner keeps long Lighthouse jobs locked on small production hosts", 
 test("secondary routes render their own content and metadata", async () => {
   const routes = [
     ["/pricing", "Pricing — Hatsmash", "Free catches the issue"],
-    ["/community", "Community — Hatsmash", "most smashable sites"],
-    ["/login", "Log In — Hatsmash", "Log in and keep smashing"],
+    ["/community", "Community — Hatsmash", "Common issues. Clear next steps"],
+    ["/login", "Log In — Hatsmash", "Welcome back to Hatsmash"],
     ["/signup", "Sign Up — Hatsmash", "Create your Hatsmash account"],
   ];
 
@@ -171,8 +170,7 @@ test("authentication pages use the secure email-code flow without blocking anony
   for (const path of ["/login", "/signup"]) {
     const html = await htmlFor(path);
     assert.match(html, /one-time verification code/i);
-    assert.match(html, /No password required/i);
-    assert.match(html, /anonymous website scans remain available/i);
+    assert.doesNotMatch(html, /anonymous website scans|no login|no account required|keep smashing/i);
     assert.doesNotMatch(html, /type="password"|authentication is not connected/i);
   }
 });

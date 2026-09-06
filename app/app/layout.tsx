@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 const title = "Run a Scan — Hatsmash";
-const description = "Scan an AI-built website and preview realistic accessibility, performance, SEO, AI-tell, and security findings.";
+const description = "Review your website’s accessibility, performance, SEO, content quality, and security with actionable findings.";
 
 export const metadata: Metadata = {
   title,

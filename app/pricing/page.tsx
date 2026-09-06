@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SiteNav } from "../_components/SiteNav";
 
 const title = "Pricing — Hatsmash";
-const description = "Choose the Hatsmash plan that fits how often you audit AI-built websites.";
+const description = "Choose a Hatsmash plan for reviewing and improving your websites.";
 export const metadata: Metadata = {
   title, description,
   openGraph: { title, description, images: [] },
@@ -14,17 +14,17 @@ const plans = [
     name: "Free",
     price: "$0",
     note: "For checking what you just shipped.",
-    features: ["3 live scans per day", "Full issue summary", "Fix-prompts for one AI builder", "No login required"],
-    cta: "Start smashing",
+    features: ["3 live scans per day", "Full issue summary", "Practical repair prompts", "Security and quality checks"],
+    cta: "Start your audit",
     popular: false,
   },
   {
     name: "Pro",
     price: "$19",
     suffix: "/month",
-    note: "For people who ship AI-built sites weekly.",
-    features: ["Unlimited live scans", "All builder prompts side by side", "Saved reports and site history", "Weekly re-scan monitoring", "Exportable reports"],
-    cta: "Join the Pro waitlist",
+    note: "Planned for ongoing website maintenance.",
+    features: ["Higher scan limits", "Repository connections", "Saved reports and site history", "Scheduled monitoring", "Exportable reports"],
+    cta: "Pro is coming soon",
     popular: true,
   },
   {
@@ -33,7 +33,7 @@ const plans = [
     suffix: "/month",
     note: "For communities reviewing many projects.",
     features: ["Everything in Pro", "10 member workspaces", "Shared audit library", "Community challenges", "Priority report exports"],
-    cta: "Join the Creator waitlist",
+    cta: "Creator is coming soon",
     popular: false,
   },
 ];
@@ -51,7 +51,7 @@ export default function PricingPage() {
       <section className="pricing-grid" aria-label="Hatsmash plans">
         {plans.map((plan) => (
           <article className={plan.popular ? "plan-card popular" : "plan-card"} key={plan.name}>
-            {plan.popular && <span className="popular-label">MOST POPULAR</span>}
+            {plan.popular && <span className="popular-label">COMING SOON</span>}
             <h2>{plan.name}</h2>
             <div className="plan-price"><strong>{plan.price}</strong>{plan.suffix && <span>{plan.suffix}</span>}</div>
             <p>{plan.note}</p>
@@ -59,7 +59,7 @@ export default function PricingPage() {
             {plan.name === "Free" ? (
               <a href="/app">{plan.cta} <span>→</span></a>
             ) : (
-              <button type="button" title="Payments are not connected yet">{plan.cta} <span>→</span></button>
+              <button type="button" disabled title="This plan is not available yet">{plan.cta}</button>
             )}
           </article>
         ))}
@@ -67,9 +67,9 @@ export default function PricingPage() {
       <p className="pricing-disclaimer">Pro and Creator checkout is intentionally not active yet. No payment will be collected.</p>
 
       <section className="faq-section">
-        <div><p className="marketing-eyebrow"><span>FAQ</span> Straight answers</p><h2>Before you smash the buy button.</h2></div>
+        <div><p className="marketing-eyebrow"><span>FAQ</span> Straight answers</p><h2>A few useful details.</h2></div>
         <div className="faq-list">
-          <details open><summary>What stays free?</summary><p>Three daily scans, the complete issue summary, and fix-prompts for one selected AI builder.</p></details>
+          <details open><summary>What stays free?</summary><p>Three daily scans, the complete issue summary, and practical repair prompts.</p></details>
           <details><summary>Why is there a scan limit?</summary><p>Live browser inspection costs money to run. The limit prevents abuse; it is not designed to make the free product useless.</p></details>
           <details><summary>Can I cancel anytime?</summary><p>Yes, once subscriptions launch. There is no active billing in this build.</p></details>
           <details><summary>Does Creator include client reports?</summary><p>Creator is planned to include shareable, exportable reports and a shared audit library.</p></details>

@@ -6,14 +6,15 @@ import "@fontsource/ibm-plex-sans/400.css";
 import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/600.css";
 import "./globals.css";
+import "./refresh.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("host") ?? "hatsmash.com";
   const protocol = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
   const image = `${protocol}://${host}/og.png`;
-  const title = "Hatsmash — Find what your AI builder missed";
-  const description = "Audit an AI-built website and get copy-paste prompts to fix accessibility, performance, SEO, AI-tells, and security issues.";
+  const title = "Hatsmash — Build a safer, better website";
+  const description = "Find website security, performance, accessibility, SEO, and content issues with clear evidence and practical repair instructions.";
 
   return {
     title,

@@ -3,7 +3,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import {
   issueCategories,
-  targetTools,
   unlockEmailSchema,
   type IssueCategory,
   type ScanIssue,
@@ -12,9 +11,9 @@ import {
   type ScanJobStatus,
   type ScanResult,
   type ScanStage,
-  type TargetTool,
 } from "@/lib/scan-schema";
 import { SiteNav } from "../_components/SiteNav";
+import { repairPrompt } from "@/lib/repair-prompt";
 
 type ScanState = "idle" | "scanning" | "complete" | "error";
 
@@ -32,8 +31,8 @@ function storedUnlockEmail() {
 const scanSteps: Array<{ stage: Exclude<ScanStage, "done" | "failed">; label: string }> = [
   { stage: "queued", label: "Waiting for an available scanner" },
   { stage: "rendering", label: "Rendering the live page" },
-  { stage: "scanning", label: "Checking accessibility, performance, SEO, AI-tells, and security" },
-  { stage: "generating-fixes", label: "Generating tool-specific fix prompts" },
+  { stage: "scanning", label: "Checking accessibility, performance, SEO, content quality, and security" },
+  { stage: "generating-fixes", label: "Preparing repair instructions" },
 ];
 
 const stageOrder = scanSteps.map((step) => step.stage);
@@ -42,7 +41,7 @@ const categoryLabels: Record<IssueCategory, { badge: string; tab: string }> = {
   Accessibility: { badge: "A11Y", tab: "Accessibility" },
   Performance: { badge: "PERF", tab: "Performance" },
   SEO: { badge: "SEO", tab: "SEO" },
-  "AI-tell": { badge: "AI", tab: "AI-Tells" },
+  "AI-tell": { badge: "QUALITY", tab: "Content quality" },
   Security: { badge: "SEC", tab: "Security" },
 };
 
@@ -212,7 +211,6 @@ export default function Home() {
   const [completedFindings, setCompletedFindings] = useState<ScanIssue[] | null>(null);
   const [demoVisibleCount, setDemoVisibleCount] = useState(3);
   const [activeCategory, setActiveCategory] = useState<IssueCategory | null>(null);
-  const [selectedTool, setSelectedTool] = useState<TargetTool>(targetTools[0]);
   const [expandedFindings, setExpandedFindings] = useState<Set<string>>(new Set());
   const [copyFeedback, setCopyFeedback] = useState<{ findingId: string; mode: "copied" | "selected" } | null>(null);
   const [unlockEmail, setUnlockEmail] = useState<string | null>(() => storedUnlockEmail());
@@ -369,7 +367,7 @@ export default function Home() {
   }
 
   async function copyPrompt(finding: ScanIssue) {
-    const prompt = finding.fixPrompts.find((fixPrompt) => fixPrompt.tool === selectedTool)?.prompt;
+    const prompt = repairPrompt(finding);
     if (!prompt) return;
 
     let mode: "copied" | "selected" = "copied";
@@ -430,7 +428,7 @@ export default function Home() {
             <p className="eyebrow"><span aria-hidden="true">↳</span> Hatsmash analysis workspace</p>
             <h1>Website <em>analysis.</em></h1>
           </div>
-          <p>Paste your URL to inspect accessibility, performance, SEO, AI-tells, and security in one focused report.</p>
+          <p>Paste your URL to inspect accessibility, performance, SEO, content quality, and security in one focused report.</p>
         </div>
 
         <div className="audit-control-grid">
@@ -468,19 +466,19 @@ export default function Home() {
             {error ? (
               <p className="form-message error-message" id="scan-error" role="alert"><b>Scan stopped.</b> {error}</p>
             ) : (
-              <p className="form-message" id="scan-note">No account required. Three free scans per day.</p>
+              <p className="form-message" id="scan-note">Three free scans per day. Start with a live website URL.</p>
             )}
           </form>
 
-          <aside className="github-pro-card" aria-label="GitHub connection for Pro users">
+          <aside className="github-pro-card" aria-label="Repository connection for Pro users">
             <div className="audit-control-heading">
-              <div><span>02</span><strong>Connect GitHub</strong></div>
+              <div><span>02</span><strong>Connect repository</strong></div>
               <small className="pro-badge">Pro</small>
             </div>
-            <p>Link the report to your repository and map findings to the exact files that need attention.</p>
-            <a href="/pricing" title="GitHub connection is included with Hatsmash Pro">
-              <span className="github-mark" aria-hidden="true">GH</span>
-              Unlock GitHub connection
+            <p>Planned for Pro: connect your repository to bring findings closer to the code that needs attention.</p>
+            <a href="/pricing" title="Repository connections are planned for Hatsmash Pro">
+              <span className="github-mark" aria-hidden="true">&lt;/&gt;</span>
+              Explore Pro
               <b aria-hidden="true">→</b>
             </a>
           </aside>
@@ -502,22 +500,7 @@ export default function Home() {
                 </div>
                 {scan && <div className="analysis-score"><strong>{scan.score}</strong><span>/100<br />Hatsmash score</span></div>}
                 {state === "complete" && (
-                  <div className="tool-selector" aria-label="Choose a tool for the fix prompts">
-                    <span>Fix prompts for</span>
-                    <div role="group" aria-label="Target AI tool">
-                      {targetTools.map((tool) => (
-                        <button
-                          type="button"
-                          className={selectedTool === tool ? "is-active" : ""}
-                          aria-pressed={selectedTool === tool}
-                          key={tool}
-                          onClick={() => setSelectedTool(tool)}
-                        >
-                          {tool}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <p className="repair-prompt-note">Expand a finding for evidence-based repair instructions.</p>
                 )}
                 <div className="severity-counts" aria-label="Finding severity counts">
                   <span className="critical"><i />{severityCounts.critical}<small>critical</small></span>
@@ -585,7 +568,7 @@ export default function Home() {
                       {state === "complete" && (() => {
                         const completedFinding = completedFindings?.find((item) => item.id === finding.id);
                         if (!completedFinding) return null;
-                        const prompt = completedFinding.fixPrompts.find((fixPrompt) => fixPrompt.tool === selectedTool)?.prompt;
+                        const prompt = repairPrompt(completedFinding);
                         return (
                           <div className="finding-details" id={`finding-details-${finding.id}`} aria-hidden={!expandedFindings.has(finding.id)}>
                             <div className="finding-details-inner">
@@ -597,7 +580,7 @@ export default function Home() {
                                   </p>
                                   <div className="prompt-block">
                                     <div className="prompt-heading">
-                                      <span>{selectedTool} prompt</span>
+                                      <span>Repair prompt</span>
                                       <button
                                         type="button"
                                         aria-live="polite"
@@ -609,7 +592,7 @@ export default function Home() {
                                           : "Copy prompt"}
                                       </button>
                                     </div>
-                                    <p id={`prompt-${finding.id}`}>{prompt ?? "A fix prompt is not available for this tool."}</p>
+                                    <p id={`prompt-${finding.id}`}>{prompt ?? "A repair prompt is not available for this finding."}</p>
                                   </div>
                                 </>
                               ) : (
@@ -676,7 +659,7 @@ export default function Home() {
 
         <footer className="audit-workspace-footer">
           <span><i /> Live browser inspection</span>
-          <span>Fix prompts for Lovable, Cursor, Bolt, v0, and Replit</span>
+          <span>Clear findings. Practical fixes.</span>
           <a href="/pricing">Compare plans →</a>
         </footer>
       </section>

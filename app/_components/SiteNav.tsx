@@ -77,7 +77,7 @@ export function SiteNav({ current = "" }: { current?: string }) {
           </>
         )}
         <ThemeToggle compact />
-        <a className={current === "app" ? "smash-nav-cta active" : "smash-nav-cta"} href="/app">Smash It <span aria-hidden="true">→</span></a>
+        <a className={current === "app" ? "smash-nav-cta active" : "smash-nav-cta"} href="/app">Start audit <span aria-hidden="true">→</span></a>
       </nav>
     </header>
   );

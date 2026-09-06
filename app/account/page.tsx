@@ -28,7 +28,7 @@ export default async function AccountPage() {
         <div className="account-heading">
           <p className="marketing-eyebrow"><span>VERIFIED</span> Hatsmash account</p>
           <h1 id="account-title">Your account.</h1>
-          <p>Your email identity is verified by Supabase Auth. Anonymous website scans still work without signing in.</p>
+          <p>Manage your account details and continue improving your websites.</p>
         </div>
         <div className="account-card">
           <div className="account-avatar" aria-hidden="true">{account.displayName.charAt(0).toUpperCase()}</div>
@@ -42,7 +42,7 @@ export default async function AccountPage() {
           </div>
           <div className="account-security-note">
             <b>Email verified</b>
-            <span>No password is stored by Hatsmash.</span>
+            <span>Your session is verified before account details are shown.</span>
           </div>
           <SignOutButton />
         </div>

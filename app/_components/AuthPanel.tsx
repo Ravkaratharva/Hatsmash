@@ -37,12 +37,12 @@ export function AuthPanel({ mode, returnTo = "/account" }: { mode: "login" | "si
         if (cancelled) return;
         setConfigured(data.configured === true);
         setSiteKey(data.turnstileSiteKey ?? "");
-        if (!data.configured) setNotice({ kind: "error", text: "Secure account access is being configured. Anonymous scans are still available." });
+        if (!data.configured) setNotice({ kind: "error", text: "Secure account access is being configured. Please check back soon." });
       })
       .catch(() => {
         if (!cancelled) {
           setConfigured(false);
-          setNotice({ kind: "error", text: "Secure account access is temporarily unavailable. Anonymous scans are still available." });
+          setNotice({ kind: "error", text: "Secure account access is temporarily unavailable. Please try again shortly." });
         }
       });
     return () => { cancelled = true; };
@@ -153,9 +153,9 @@ export function AuthPanel({ mode, returnTo = "/account" }: { mode: "login" | "si
   return (
     <div className="auth-panel">
       <p className="marketing-eyebrow"><span>{isLogin ? "WELCOME BACK" : "START HERE"}</span> Hatsmash account</p>
-      <h1>{isLogin ? "Log in and keep smashing." : "Create your Hatsmash account."}</h1>
+      <h1>{isLogin ? "Welcome back to Hatsmash." : "Create your Hatsmash account."}</h1>
       <p className="auth-intro">
-        {isLogin ? "Enter your email" : "Enter your email to create your account."} We will send a secure, one-time verification code. No password required.
+        {isLogin ? "Enter your email" : "Enter your email to create your account."} We will send a secure, one-time verification code.
       </p>
 
       {stage === "email" && (
@@ -189,7 +189,7 @@ export function AuthPanel({ mode, returnTo = "/account" }: { mode: "login" | "si
       )}
 
       {notice && <p className={`auth-notice is-${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"} aria-live="polite">{notice.text}</p>}
-      <p className="auth-privacy">Hatsmash never stores a password. Verification is handled by Supabase Auth, and anonymous website scans remain available.</p>
+      <p className="auth-privacy">Use the verification code sent to your email to securely access your account.</p>
       <p className="auth-switch">
         {isLogin ? "New to Hatsmash?" : "Already have an account?"}{" "}
         <a href={authPagePath(isLogin ? "signup" : "login", returnTo)}>{isLogin ? "Sign up" : "Log in"}</a>
