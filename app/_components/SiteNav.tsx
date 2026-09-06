@@ -48,36 +48,35 @@ export function SiteNav({ current = "" }: { current?: string }) {
       </button>
 
       <nav className={open ? "nav-links is-open" : "nav-links"} id="primary-navigation" aria-label="Primary navigation">
-        <a className={current === "home" ? "active" : ""} href="/">Home</a>
-        <a
-          className={current === "pricing" ? "active" : ""}
-          href="/pricing"
-        >
-          Pricing
-        </a>
-        <a className={current === "community" ? "active" : ""} href="/community">Community</a>
-        <span className="nav-divider" aria-hidden="true" />
-        {account ? (
-          <details className="account-menu">
-            <summary aria-label={`Account menu for ${account.email}`}>
-              <span aria-hidden="true">{account.displayName.charAt(0).toUpperCase()}</span>
-              <b>Account</b>
-            </summary>
-            <div className="account-menu-popover">
-              <small>Signed in as</small>
-              <strong>{account.email}</strong>
-              <a href="/account">View account</a>
-              <SignOutButton className="nav-signout" />
-            </div>
-          </details>
-        ) : (
-          <>
-            <a href="/login">Log In</a>
-            <a className="signup-link" href="/signup">Sign Up</a>
-          </>
-        )}
-        <ThemeToggle compact />
-        <a className={current === "app" ? "smash-nav-cta active" : "smash-nav-cta"} href="/app">Start audit <span aria-hidden="true">→</span></a>
+        <div className="nav-primary">
+          <a className={current === "home" ? "active" : ""} href="/">Home</a>
+          <a className={current === "pricing" ? "active" : ""} href="/pricing">Pricing</a>
+          <a className={current === "community" ? "active" : ""} href="/community">Community</a>
+        </div>
+        <div className="nav-actions">
+          <span className="nav-divider" aria-hidden="true" />
+          {account ? (
+            <details className="account-menu">
+              <summary aria-label={`Account menu for ${account.email}`}>
+                <span aria-hidden="true">{account.displayName.charAt(0).toUpperCase()}</span>
+                <b>Account</b>
+              </summary>
+              <div className="account-menu-popover">
+                <small>Signed in as</small>
+                <strong>{account.email}</strong>
+                <a href="/account">View account</a>
+                <SignOutButton className="nav-signout" />
+              </div>
+            </details>
+          ) : (
+            <>
+              <a href="/login">Log In</a>
+              <a className="signup-link" href="/signup">Sign Up</a>
+            </>
+          )}
+          <ThemeToggle compact />
+          <a className={current === "app" ? "smash-nav-cta active" : "smash-nav-cta"} href="/app">Start audit <span aria-hidden="true">→</span></a>
+        </div>
       </nav>
     </header>
   );

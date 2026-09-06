@@ -1,7 +1,7 @@
 /* Refresh layout and density using the existing theme and typography. */
-.welcome-hero { position: relative; isolation: isolate; overflow: hidden; width: min(1440px, 100%); margin: auto; padding: clamp(64px, 9vh, 100px) 24px 0; text-align: center; }
+.welcome-hero { position: relative; isolation: isolate; overflow: hidden; width: min(1440px, 100%); margin: auto; padding: clamp(64px, 9vh, 100px) 24px 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .welcome-hero > .marketing-eyebrow { position: relative; z-index: 1; margin-bottom: 40px; }
-.welcome-hero h1 { position: relative; z-index: 1; margin: 0; color: var(--audit-ink); font: 700 clamp(6rem, 15vw, 15rem)/.88 var(--font-display); letter-spacing: -.035em; text-transform: none; }
+.welcome-hero h1 { position: relative; z-index: 1; width: 100%; margin: 0; color: var(--audit-ink); font: 700 clamp(6rem, 15vw, 15rem)/.88 var(--font-display); letter-spacing: -.035em; text-align: center; text-transform: none; }
 .welcome-hero h1 > span:first-child { display: block; margin-bottom: 16px; font: 500 clamp(1.2rem, 2.5vw, 2rem)/1.3 var(--font-body); letter-spacing: -.025em; }
 .welcome-period { color: var(--finding-red); }
 .welcome-description { position: relative; margin: 30px auto 26px; color: #60717b; font-size: clamp(1rem, 1.5vw, 1.2rem); line-height: 1.65; }
@@ -48,12 +48,31 @@
 .auth-panel { padding-top: 48px; padding-bottom: 48px; }.auth-visual { min-height: 560px; }.account-shell { padding-top: 54px; padding-bottom: 54px; }
 .audit-results .inspection-body, .audit-results .findings-rail { min-height: 0; }.audit-results .finding-list { align-items: start; }.audit-results .rail-error { min-height: 250px; }
 .repair-prompt-note { color: #8c9da5; font-size: .75rem; }
+@media (min-width: 861px) {
+  .marketing-nav { display: grid; grid-template-columns: 1fr auto 1fr; justify-content: normal; }
+  .marketing-logo { grid-column: 1; }
+  .nav-links { display: contents; }
+  .nav-primary { position: absolute; left: 50%; display: flex; align-items: center; gap: clamp(22px, 2.5vw, 38px); transform: translateX(-50%); }
+  .nav-actions { grid-column: 3; justify-self: end; display: flex; align-items: center; gap: clamp(17px, 2.2vw, 32px); }
+  .nav-primary > a, .nav-actions > a { position: relative; padding: 11px 0; color: #c7d0d4; font-size: .82rem; font-weight: 600; transition: color 140ms ease; }
+  .nav-primary > a::after, .nav-actions > a:not(.signup-link):not(.smash-nav-cta)::after { content: ""; position: absolute; left: 0; right: 100%; bottom: 4px; height: 2px; background: var(--finding-red); transition: right 160ms ease; }
+  .nav-primary > a:hover, .nav-primary > a.active, .nav-actions > a:hover, .nav-actions > a.active { color: white; }
+  .nav-primary > a:hover::after, .nav-primary > a.active::after, .nav-actions > a:hover::after, .nav-actions > a.active::after { right: 0; }
+  .nav-actions .signup-link { padding: 10px 13px; border: 1px solid #536169; border-radius: 4px; }
+  .nav-actions .smash-nav-cta { padding: 12px 16px; display: flex; gap: 18px; color: white; background: var(--finding-red); border-radius: 4px; }
+}
 [data-theme="dark"] .welcome-hero h1, [data-theme="dark"] .care-heading h2 { color: #f0f4f5; }
 [data-theme="dark"] .welcome-description, [data-theme="dark"] .welcome-details, [data-theme="dark"] .welcome-categories, [data-theme="dark"] .care-heading > p:last-child, [data-theme="dark"] .care-steps p, [data-theme="dark"] .care-footer { color: #95a7b0; }
 [data-theme="dark"] .repair-example { color: #edf2f4; background: #121c22; border-color: #34454e; }
 [data-theme="dark"] .repair-example > p, [data-theme="dark"] .repair-example-fix p { color: #a0afb7; }
 [data-theme="dark"] .repair-example-fix { background: #17262a; }[data-theme="dark"] .example-severity { color: var(--caution-amber); }
 @media (max-width: 860px) {
+  .nav-primary, .nav-actions { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
+  .nav-primary > a, .nav-actions > a { padding: 12px; color: #c7d0d4; font-size: .82rem; font-weight: 600; }
+  .nav-primary > a.active, .nav-primary > a:hover, .nav-actions > a:hover { color: white; }
+  .nav-actions .signup-link { border: 1px solid #536169; border-radius: 4px; }
+  .nav-actions .smash-nav-cta { margin-top: 8px; display: flex; justify-content: space-between; color: white; background: var(--finding-red); border-radius: 4px; }
+  .nav-actions .nav-divider { display: none; }
   .welcome-hero { padding-top: 56px; }.welcome-categories { margin-top: 40px; }
   .care-section { grid-template-columns: 1fr; gap: 28px; padding-top: 40px; }.care-steps { gap: 22px; }.inner-hero { padding-top: 42px; padding-bottom: 30px; }
 }
