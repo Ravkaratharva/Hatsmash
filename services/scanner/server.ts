@@ -63,21 +63,20 @@ app.get("/readyz", async (_request, reply) => {
   const redisAvailablePromise = settlesWithin(infrastructure.quotaConnection.ping(), 3_000);
   const databasePromise = checkDatabaseReadiness({ timeoutMs: 6_000 });
   const redisAvailable = await redisAvailablePromise;
-  const registeredWorkerAvailable = redisAvailable
-    ? await settlesWithin(infrastructure.queue.getWorkersCount().then((count) => {
-      if (count < 1) throw new Error("No registered scan worker");
-    }), 3_000)
-    : false;
+  // This service owns the worker process, so its local running state is the
+  // authoritative readiness signal. Managed Redis providers may restrict or
+  // omit CLIENT LIST data, which makes Queue#getWorkersCount report false
+  // negatives even while this worker is actively completing jobs.
   const localWorkerAvailable = infrastructure.worker?.isRunning() ?? false;
   const database = await databasePromise;
-  const coreAvailable = redisAvailable && registeredWorkerAvailable && localWorkerAvailable;
+  const coreAvailable = redisAvailable && localWorkerAvailable;
   const status = !coreAvailable ? "unavailable" : database.available ? "ready" : "degraded";
   const payload = {
     ok: coreAvailable,
     status,
     components: {
       redis: redisAvailable ? "ready" : "unavailable",
-      worker: registeredWorkerAvailable && localWorkerAvailable ? "ready" : "unavailable",
+      worker: localWorkerAvailable ? "ready" : "unavailable",
       database: !database.configured ? "not_configured" : database.available ? "ready" : "unavailable",
     },
   };
