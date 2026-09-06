@@ -75,7 +75,10 @@ function createDatabaseAdapter(databaseUrl: string): ScannerDatabaseAdapter {
       const inserted = await db
         .insert(scans)
         .values(record)
-        .onConflictDoNothing({ target: scans.id });
+        // Omitting an arbiter target keeps this INSERT-only role truly
+        // write-only. PostgreSQL requires SELECT when a conflict target is
+        // named, which would unnecessarily expose stored scan records.
+        .onConflictDoNothing();
       return inserted.count > 0 ? "stored" : "duplicate";
     },
     async insertCapturedEmail(record) {
