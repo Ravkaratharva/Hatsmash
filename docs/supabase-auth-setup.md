@@ -2,9 +2,12 @@
 
 The code uses Supabase Auth for passwordless, six-digit email OTPs. Hatsmash does not store passwords or application user records in this authentication slice. Sessions are handled on the server with HTTP-only cookies.
 
-## 1. Create a dedicated project
+## 1. Reuse the dedicated project
 
-Create a new Supabase project named `Hatsmash`. Do not reuse an unrelated project. Use the current publishable key (`sb_publishable_...`), not a service-role or secret key.
+Use the existing Supabase project `okhcheekqxtmdonrrudd`, named `Hatsmash`. If
+the free project is paused, restore that project through the dashboard; do not
+create a replacement. Use the current publishable key (`sb_publishable_...`),
+not a service-role or secret key.
 
 ## 2. Configure email OTP
 
@@ -51,9 +54,14 @@ No service-role key is required. The app refuses authentication requests when co
 
 Apply `drizzle/0000_auth_rate_limits.sql` through the Sites deployment flow. The table contains only HMAC-hashed abuse-control keys and counters; it never contains raw IP addresses, email addresses, OTPs, tokens, or user profiles.
 
-## Future user-owned data
+## Existing application tables and future user ownership
 
-No `profiles` or other Supabase application table is created in this slice. Before adding saved scans, reports, billing records, GitHub connections, or monitoring settings, enable RLS and use ownership policies equivalent to:
+The Postgres migration system in `drizzle-postgres/` already creates `profiles`,
+`scans`, and `captured_emails`. It is independent of the Cloudflare D1 history
+in `drizzle/`, which contains frontend auth rate-limit storage. RLS is enabled,
+and public/client roles cannot read the application tables. Before adding saved
+scans, reports, billing records, GitHub connections, or monitoring settings,
+add reviewed ownership policies equivalent to:
 
 ```sql
 using ((select auth.uid()) = user_id)

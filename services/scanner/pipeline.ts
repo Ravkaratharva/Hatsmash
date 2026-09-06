@@ -97,7 +97,17 @@ export async function runScanPipeline(
       scannedAt: new Date().toISOString(),
       findings,
     });
-    void persistCompletedScan(result, ipHash, scanId);
+    void persistCompletedScan(result, ipHash, scanId).catch(() => {
+      // persistCompletedScan is intentionally failure-safe. This defensive
+      // handler guarantees a future regression cannot become an unhandled
+      // rejection or prevent the completed scan result from being returned.
+      console.error(JSON.stringify({
+        event: "scan_persistence",
+        scanId: scanId ?? "generated",
+        status: "failed",
+        reason: "unhandled",
+      }));
+    });
     return result;
   } finally {
     if (!renderedClosed) await rendered.close();

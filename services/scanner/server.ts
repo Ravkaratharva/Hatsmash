@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { scanResultSchema, unlockRequestSchema } from "../../lib/scan-schema.js";
 import { SCAN_PORT } from "./config.js";
-import { persistCapturedEmail } from "./database.js";
+import { checkDatabaseReadiness, persistCapturedEmail } from "./database.js";
 import { decodeWorkerError, toPublicScanError } from "./errors.js";
 import type { ScanProgress } from "./pipeline.js";
 import { createScanInfrastructure } from "./queue.js";
@@ -43,6 +43,46 @@ app.get("/healthz", async (_request, reply) => {
   } catch {
     return reply.code(503).send({ ok: false, queue: "unavailable" });
   }
+});
+
+async function settlesWithin<T>(operation: Promise<T>, timeoutMs: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      operation.then(() => true, () => false),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+app.get("/readyz", async (_request, reply) => {
+  const redisAvailablePromise = settlesWithin(infrastructure.quotaConnection.ping(), 3_000);
+  const databasePromise = checkDatabaseReadiness({ timeoutMs: 6_000 });
+  const redisAvailable = await redisAvailablePromise;
+  const registeredWorkerAvailable = redisAvailable
+    ? await settlesWithin(infrastructure.queue.getWorkersCount().then((count) => {
+      if (count < 1) throw new Error("No registered scan worker");
+    }), 3_000)
+    : false;
+  const localWorkerAvailable = infrastructure.worker?.isRunning() ?? false;
+  const database = await databasePromise;
+  const coreAvailable = redisAvailable && registeredWorkerAvailable && localWorkerAvailable;
+  const status = !coreAvailable ? "unavailable" : database.available ? "ready" : "degraded";
+  const payload = {
+    ok: coreAvailable,
+    status,
+    components: {
+      redis: redisAvailable ? "ready" : "unavailable",
+      worker: registeredWorkerAvailable && localWorkerAvailable ? "ready" : "unavailable",
+      database: !database.configured ? "not_configured" : database.available ? "ready" : "unavailable",
+    },
+  };
+
+  return coreAvailable ? payload : reply.code(503).send(payload);
 });
 
 app.post("/api/scan", async (request, reply) => {
